@@ -11,10 +11,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config.settings import settings
-from db.models import Rule, Template, NudgeLog, UserPreference
-from engine.rules.models import DigitalTwinEvent, NudgeEvent, NudgeType, NudgeSeverity
-from engine.templates.renderer import render
+from celine.nudging.config.settings import settings
+from celine.nudging.db.models import NudgeLog, Rule, Template, UserPreference
+from celine.nudging.engine.rules.models import (
+    DigitalTwinEvent,
+    NudgeEvent,
+    NudgeSeverity,
+    NudgeType,
+)
+from celine.nudging.engine.templates.renderer import render
 
 # Families that do NOT require energy/digital-twin metrics
 NON_ENERGY_FAMILIES: set[str] = {
@@ -24,6 +29,8 @@ NON_ENERGY_FAMILIES: set[str] = {
     "seasonal",
     "weather",
 }
+
+
 class EngineResultStatus(str, Enum):
     CREATED = "created"
     NOT_TRIGGERED = "not_triggered"
@@ -44,16 +51,17 @@ class EngineResult:
 # Time inference (daily/weekly/monthly)
 # -----------------------------
 
+
 @dataclass(frozen=True)
 class TimeScope:
     frequency: str  # "daily" | "weekly" | "monthly"
-    scope: str      # stable value used for dedup (e.g. 2026-02-01, 2026-W05, 2026-02)
+    scope: str  # stable value used for dedup (e.g. 2026-02-01, 2026-W05, 2026-02)
 
 
-_DAILY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")   # 2026-02-01
-_MONTHLY_RE = re.compile(r"^\d{4}-\d{2}$")       # 2026-02
-_WEEKLY_RE = re.compile(r"^\d{4}-W\d{2}$")       # 2026-W05 (ISO week)
-_YEARLY_RE = re.compile(r"^\d{4}$")              # 2026
+_DAILY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # 2026-02-01
+_MONTHLY_RE = re.compile(r"^\d{4}-\d{2}$")  # 2026-02
+_WEEKLY_RE = re.compile(r"^\d{4}-W\d{2}$")  # 2026-W05 (ISO week)
+_YEARLY_RE = re.compile(r"^\d{4}$")  # 2026
 
 
 def _infer_time_scope(facts: dict) -> TimeScope | None:
@@ -117,6 +125,7 @@ def _normalize_time_fields(facts: dict, ts: TimeScope) -> dict:
 # Contract validation (Step 1)
 # -----------------------------
 
+
 def _validate_facts_contract(facts: dict) -> tuple[bool, list[str]]:
     """
     Minimal DT-enriched contract:
@@ -125,7 +134,9 @@ def _validate_facts_contract(facts: dict) -> tuple[bool, list[str]]:
       - scenario (str)
     """
     errors: list[str] = []
-    if not isinstance(facts.get("facts_version"), str) or not facts.get("facts_version"):
+    if not isinstance(facts.get("facts_version"), str) or not facts.get(
+        "facts_version"
+    ):
         errors.append("missing facts_version")
     if not isinstance(facts.get("scenario"), str) or not facts.get("scenario"):
         errors.append("missing scenario")
@@ -159,14 +170,22 @@ def _resolve_rule_ids_from_scenario(scenario: str) -> list[str]:
     return []
 
 
-async def _filter_rule_ids_by_definition(db: AsyncSession, rule_ids: list[str], frequency: str, ) -> list[str]:
+async def _filter_rule_ids_by_definition(
+    db: AsyncSession,
+    rule_ids: list[str],
+    frequency: str,
+) -> list[str]:
     """
-       Select only the rule(s) matching inferred frequency.
+    Select only the rule(s) matching inferred frequency.
 
-       Quick heuristic based on rule_id naming.
-       If you prefer, make it stricter by checking rule.definition["dedup_window"] later.
-       """
-    res = await db.execute(select(Rule.id, Rule.definition).where(Rule.id.in_(rule_ids), Rule.enabled.is_(True)))
+    Quick heuristic based on rule_id naming.
+    If you prefer, make it stricter by checking rule.definition["dedup_window"] later.
+    """
+    res = await db.execute(
+        select(Rule.id, Rule.definition).where(
+            Rule.id.in_(rule_ids), Rule.enabled.is_(True)
+        )
+    )
     rows = res.all()
 
     wanted = frequency.lower().strip()  # daily|weekly|monthly
@@ -182,6 +201,7 @@ async def _filter_rule_ids_by_definition(db: AsyncSession, rule_ids: list[str], 
 # -----------------------------
 # Helpers
 # -----------------------------
+
 
 async def _resolve_lang(
     db: AsyncSession,
@@ -205,12 +225,15 @@ async def _resolve_lang(
     # 3) fallback
     return settings.DEFAULT_LANG
 
+
 def compute_dedup_key(rule_id: str, user_id: str, scope: str) -> str:
     return f"{rule_id}:{user_id}:{scope}"
+
 
 def _attempt_dedup_key(rule_id: str, user_id: str, scope: str) -> str:
     # unique key so it won't collide with uq_nudges_dedup_key
     return f"attempt:{rule_id}:{user_id}:{scope}:{uuid4().hex}"
+
 
 async def _log_status(
     db: AsyncSession,
@@ -258,13 +281,20 @@ async def _log_status(
     )
     await db.commit()
 
-async def _load_rule_and_template(db: AsyncSession, rule_id: str, lang: str) -> tuple[Rule, Template]:
-    rule_res = await db.execute(select(Rule).where(Rule.id == rule_id, Rule.enabled.is_(True)))
+
+async def _load_rule_and_template(
+    db: AsyncSession, rule_id: str, lang: str
+) -> tuple[Rule, Template]:
+    rule_res = await db.execute(
+        select(Rule).where(Rule.id == rule_id, Rule.enabled.is_(True))
+    )
     rule = rule_res.scalar_one_or_none()
     if not rule:
         raise ValueError(f"Rule not found or disabled: {rule_id}")
 
-    tmpl_res = await db.execute(select(Template).where(Template.rule_id == rule.id, Template.lang == lang))
+    tmpl_res = await db.execute(
+        select(Template).where(Template.rule_id == rule.id, Template.lang == lang)
+    )
     tmpl = tmpl_res.scalar_one_or_none()
     if not tmpl:
         raise ValueError(f"Template not found for rule={rule_id} lang={lang}")
@@ -313,6 +343,7 @@ def _evaluate_imported_up(rule: Rule, facts: dict) -> tuple[bool, dict, str | No
 
     return True, enriched, None
 
+
 def _evaluate_imported_down(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
     threshold_pct = float(rule.definition.get("threshold_pct", -5.0))
     delta_pct = facts.get("delta_pct")
@@ -323,7 +354,9 @@ def _evaluate_imported_down(rule: Rule, facts: dict) -> tuple[bool, dict, str | 
     except Exception:
         return False, {**facts, "delta_pct": delta_pct}, "invalid_fact:delta_pct"
     enriched = {**facts, "threshold_pct": threshold_pct}
-    return (True, enriched, None) if triggered else (False, enriched, "condition_not_met")
+    return (
+        (True, enriched, None) if triggered else (False, enriched, "condition_not_met")
+    )
 
 
 def _evaluate_static_message(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
@@ -357,13 +390,14 @@ def _evaluate_rule(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
     # Default safe
     return _evaluate_passthrough(rule, facts)
 
-    #TODO - Aggiungere evaluate per tutte le altre regole
+    # TODO - Aggiungere evaluate per tutte le altre regole
 
 
 def _should_skip_dedup(rule: Rule) -> bool:
     return str(rule.definition.get("dedup_window", "")).lower() == "always"
 
-#TODO valutare bene per la duplicazione
+
+# TODO valutare bene per la duplicazione
 def _dedup_scope(rule: Rule, facts: dict) -> str:
     window = str(rule.definition.get("dedup_window") or "monthly").lower().strip()
 
@@ -395,6 +429,7 @@ def _dedup_scope(rule: Rule, facts: dict) -> str:
 # Engine main
 # -----------------------------
 
+
 async def run_engine_batch(
     evt: DigitalTwinEvent,
     db: AsyncSession,
@@ -402,10 +437,8 @@ async def run_engine_batch(
     lang: str | None = None,
 ) -> list[EngineResult]:
 
-
     facts_in_raw = _facts_from_event(evt)
     lang = lang or await _resolve_lang(db, user_id=str(evt.user_id), facts=facts_in_raw)
-
 
     ok, errors = _validate_facts_contract(facts_in_raw)
     if not ok:
@@ -430,7 +463,6 @@ async def run_engine_batch(
             )
         ]
 
-
     scenario = str(facts_in_raw["scenario"])
 
     # Infer time scope -> choose daily/weekly/monthly (only ONE)
@@ -454,8 +486,10 @@ async def run_engine_batch(
                 details={
                     "expected": ["YYYY-MM-DD", "YYYY-Www", "YYYY-MM"],
                     "hint": "Send facts.time (preferred) or date/week/period",
-                    "got": facts_in_raw.get("time") or facts_in_raw.get("date") or facts_in_raw.get(
-                        "week") or facts_in_raw.get("period"),
+                    "got": facts_in_raw.get("time")
+                    or facts_in_raw.get("date")
+                    or facts_in_raw.get("week")
+                    or facts_in_raw.get("period"),
                 },
             )
         ]
@@ -496,14 +530,21 @@ async def run_engine_batch(
             scenario=scenario,
             facts_version=str(facts_in_raw.get("facts_version") or ""),
             facts=facts_in_raw,
-            details={"reason": "no_rule_for_inferred_frequency", "frequency": ts.frequency,
-                     "mapped_rules": rule_ids_all},
+            details={
+                "reason": "no_rule_for_inferred_frequency",
+                "frequency": ts.frequency,
+                "mapped_rules": rule_ids_all,
+            },
         )
         return [
             EngineResult(
                 status=EngineResultStatus.UNKNOWN_SCENARIO,
                 reason="no_rule_for_inferred_frequency",
-                details={"scenario": scenario, "frequency": ts.frequency, "mapped_rules": rule_ids_all},
+                details={
+                    "scenario": scenario,
+                    "frequency": ts.frequency,
+                    "mapped_rules": rule_ids_all,
+                },
             )
         ]
 
@@ -536,7 +577,9 @@ async def _run_single_rule(
     try:
         rule, tmpl = await _load_rule_and_template(db, rule_id, lang)
         facts_version_str = str(facts_in.get("facts_version") or "")
-        scope = _dedup_scope(rule, facts_in)  # compute early for audit #TODO: fare la casistica "always"
+        scope = _dedup_scope(
+            rule, facts_in
+        )  # compute early for audit #TODO: fare la casistica "always"
 
     except ValueError as e:
         facts_version_str = str(facts_in.get("facts_version") or "")
@@ -545,8 +588,13 @@ async def _run_single_rule(
             status=EngineResultStatus.UNKNOWN_SCENARIO,
             rule_id=str(rule_id),
             user_id=str(evt.user_id),
-            scope=str(facts_in.get("time") or facts_in.get("date") or facts_in.get("week") or facts_in.get(
-                "period") or "__no_scope__"),
+            scope=str(
+                facts_in.get("time")
+                or facts_in.get("date")
+                or facts_in.get("week")
+                or facts_in.get("period")
+                or "__no_scope__"
+            ),
             scenario=scenario,
             facts_version=facts_version_str,
             facts=facts_in,
@@ -662,13 +710,20 @@ async def _run_single_rule(
             scenario=scenario_str,
             facts_version=facts_version_str,
             facts=facts_in,
-            details={"reason": "duplicate_in_dedup_window", "created_dedup_key": dk_str},
+            details={
+                "reason": "duplicate_in_dedup_window",
+                "created_dedup_key": dk_str,
+            },
         )
 
         return EngineResult(
             status=EngineResultStatus.SUPPRESSED_DEDUP,
             reason="duplicate_in_dedup_window",
-            details={"dedup_key": dk_str, "scenario": scenario_str, "rule_id": rule_id_str},
+            details={
+                "dedup_key": dk_str,
+                "scenario": scenario_str,
+                "rule_id": rule_id_str,
+            },
         )
 
     return EngineResult(

@@ -1,14 +1,22 @@
+from __future__ import annotations
+
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.session import get_db
-from engine.rules.models import DigitalTwinEvent
-from engine.rules.contract import validate_facts_contract
-from engine.engine_service import run_engine_batch, EngineResultStatus
-from orchestrator.orchestrator import orchestrate
+from celine.nudging.db.session import get_db
+from celine.nudging.engine.engine_service import EngineResultStatus, run_engine_batch
+from celine.nudging.engine.rules.contract import validate_facts_contract
+from celine.nudging.engine.rules.models import DigitalTwinEvent
+from celine.nudging.orchestrator.orchestrator import orchestrate
 
 router = APIRouter()
+
+
+logger = logging.getLogger(__name__)
+
 
 @router.post("/ingest-event")
 async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)):
@@ -41,6 +49,12 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
 
         for r in created:
             nudge = r.nudge
+
+            if nudge is None:
+                logger.warning(f"Skipping empty nudge")
+                logger.debug(f"{r}")
+                continue
+
             jobs = await orchestrate(db, nudge.nudge_id)
 
             if jobs:

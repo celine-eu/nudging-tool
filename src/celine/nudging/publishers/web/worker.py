@@ -1,21 +1,21 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
-import hashlib
 from datetime import datetime
 from uuid import uuid4
 
-from pywebpush import webpush, WebPushException
+from pywebpush import WebPushException, webpush
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models import DeliveryLog, WebPushSubscription
-from orchestrator.models import DeliveryJob
-from publishers.base import Publisher, PublishResult
+from celine.nudging.db.models import DeliveryLog, WebPushSubscription
+from celine.nudging.orchestrator.models import DeliveryJob
+from celine.nudging.publishers.base import Publisher, PublishResult
 
+VAPID_SUBJECT = "mailto:you@example.com"
 
-VAPID_SUBJECT="mailto:you@example.com"
 
 def _get_vapid_private_key() -> str | None:
     key = os.getenv("VAPID_PRIVATE_KEY")
@@ -27,6 +27,7 @@ def _get_vapid_private_key() -> str | None:
         key = key.replace("\\n", "\n")
 
     return key
+
 
 class WebPublisher(Publisher):
     """
@@ -117,20 +118,21 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
         destination = f"{job.destination}:none"
 
     # Create delivery log (same style as send_web)
-    db.add(DeliveryLog(
-        id=getattr(job, "job_id", uuid4().hex),
-        nudge_id=job.nudge_id,
-        channel="webpush",
-        destination=job.destination,
-        #title=job.title,
-        #body=job.body,
-        status=status,
-        created_at=now,
-        sent_at=now if sent > 0 else None,
-        #dedup_key=getattr(job, "dedup_key", None),
-        error=last_error,
-    ))
+    db.add(
+        DeliveryLog(
+            id=getattr(job, "job_id", uuid4().hex),
+            nudge_id=job.nudge_id,
+            channel="webpush",
+            destination=job.destination,
+            # title=job.title,
+            # body=job.body,
+            status=status,
+            created_at=now,
+            sent_at=now if sent > 0 else None,
+            # dedup_key=getattr(job, "dedup_key", None),
+            error=last_error,
+        )
+    )
 
     await db.commit()
     return PublishResult(status=status, sent_at=sent_at, error=last_error)
-

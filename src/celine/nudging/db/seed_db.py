@@ -1,14 +1,13 @@
 import asyncio
 from pathlib import Path
-import yaml
 
+import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.session import AsyncSessionLocal
-from db.models import Rule, Template, UserPreference
-from config.settings import settings  # <-- for DEFAULT_LANG
-
+from celine.nudging.config.settings import settings  # <-- for DEFAULT_LANG
+from celine.nudging.db.models import Rule, Template, UserPreference
+from celine.nudging.db.session import AsyncSessionLocal
 
 SEED_DIR = Path(__file__).parent / "seed"
 
@@ -75,7 +74,9 @@ async def upsert_template(db: AsyncSession, t: dict):
 async def upsert_preference(db: AsyncSession, p: dict):
     user_id = p["user_id"]
 
-    existing = await db.execute(select(UserPreference).where(UserPreference.user_id == user_id))
+    existing = await db.execute(
+        select(UserPreference).where(UserPreference.user_id == user_id)
+    )
     obj = existing.scalar_one_or_none()
     if obj is None:
         obj = UserPreference(user_id=user_id)
@@ -120,7 +121,9 @@ async def main():
 
         await db.commit()
 
-    print(f"Seed completed: {len(rules_y)} rules, {len(tmpl_y)} templates, {len(pref_y)} preferences.")
+    print(
+        f"Seed completed: {len(rules_y)} rules, {len(tmpl_y)} templates, {len(pref_y)} preferences."
+    )
 
 
 if __name__ == "__main__":

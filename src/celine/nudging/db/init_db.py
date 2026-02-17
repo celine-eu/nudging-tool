@@ -1,8 +1,11 @@
 import asyncio
 
-from db.session import engine
-from db.models import Base
-from db.seed_db import main as seed_main  # adjust import path to where seed_db.py lives
+from celine.nudging.db.models import Base
+from celine.nudging.db.seed_db import (
+    main as seed_main,
+)  # adjust import path to where seed_db.py lives
+from celine.nudging.db.session import engine
+
 
 async def main():
     async with engine.begin() as conn:
@@ -15,6 +18,7 @@ async def main():
     await seed_main()
 
     print("DB initialized + seeded.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

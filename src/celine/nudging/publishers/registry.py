@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Dict
 
-from orchestrator.models import Channel
-from publishers.base import Publisher
-from publishers.web.worker import WebPublisher
-
+from celine.nudging.orchestrator.models import Channel
+from celine.nudging.publishers.base import Publisher
+from celine.nudging.publishers.web.worker import WebPublisher
 
 _PUBLISHERS: Dict[Channel, Publisher] = {
     Channel.web: WebPublisher(),

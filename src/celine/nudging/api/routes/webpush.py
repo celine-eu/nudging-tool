@@ -1,26 +1,36 @@
-import os, json, uuid
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pywebpush import webpush, WebPushException
+from __future__ import annotations
 
-from db.session import get_db
-from db.models import WebPushSubscription
+import json
+import os
+import uuid
+
+from fastapi import APIRouter, Depends, Request
+from pywebpush import WebPushException, webpush
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from celine.nudging.db.models import WebPushSubscription
+from celine.nudging.db.session import get_db
 
 router = APIRouter(prefix="/webpush", tags=["webpush"])
+
 
 def _vapid_public_key() -> str:
     return (os.getenv("VAPID_PUBLIC_KEY") or "").strip()
 
+
 def _vapid_private_key() -> str:
     return (os.getenv("VAPID_PRIVATE_KEY") or "").strip()
+
 
 def _vapid_subject() -> str:
     return (os.getenv("VAPID_SUBJECT") or "mailto:test@example.com").strip()
 
+
 @router.get("/vapid-public-key")
 async def vapid_public_key():
     return {"public_key": _vapid_public_key()}
+
 
 @router.post("/subscribe", response_model=None)
 async def subscribe(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
@@ -61,6 +71,7 @@ async def subscribe(body: dict, request: Request, db: AsyncSession = Depends(get
     await db.commit()
     return {"status": "ok"}
 
+
 @router.post("/unsubscribe", response_model=None)
 async def unsubscribe(body: dict, db: AsyncSession = Depends(get_db)):
     user_id = body["user_id"]
@@ -78,6 +89,7 @@ async def unsubscribe(body: dict, db: AsyncSession = Depends(get_db)):
         await db.commit()
 
     return {"status": "ok"}
+
 
 @router.post("/send-test", response_model=None)
 async def send_test(body: dict, db: AsyncSession = Depends(get_db)):
@@ -103,7 +115,10 @@ async def send_test(body: dict, db: AsyncSession = Depends(get_db)):
     for s in subs:
         try:
             webpush(
-                subscription_info={"endpoint": s.endpoint, "keys": {"p256dh": s.p256dh, "auth": s.auth}},
+                subscription_info={
+                    "endpoint": s.endpoint,
+                    "keys": {"p256dh": s.p256dh, "auth": s.auth},
+                },
                 data=json.dumps(payload),
                 vapid_private_key=_vapid_private_key(),
                 vapid_claims={"sub": _vapid_subject()},
