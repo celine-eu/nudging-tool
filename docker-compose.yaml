@@ -44,6 +44,5 @@ services:
     extra_hosts:
       - "keycloak.celine.localhost:172.17.0.1"
       - "api.celine.localhost:172.17.0.1"
-
-volumes:
-  pgdata:
+# volumes:
+#   pgdata:
