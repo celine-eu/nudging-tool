@@ -28,6 +28,23 @@ services:
   #   command: ["python", "-m", "db.init_db"]
   #   restart: "no"
 
+  api-init:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:securepassword123@172.17.0.1:15432/nudging
+      DEFAULT_LANG: it
+      MAX_PER_DAY_DEFAULT: 3
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
+    command: >
+      uv run python -m celine.nudging.db.init_db
+    volumes:
+      - ./src:/app/src
+    extra_hosts:
+      - "keycloak.celine.localhost:172.17.0.1"
+      - "api.celine.localhost:172.17.0.1"
+
   api:
     build: .
     environment:
@@ -39,6 +56,9 @@ services:
       VAPID_SUBJECT: ${VAPID_SUBJECT}
     ports:
       - "8016:8016"
+    depends_on:
+      api-init:
+        condition: service_completed_successfully
     # volumes:
     #   - .:/app
     extra_hosts:
