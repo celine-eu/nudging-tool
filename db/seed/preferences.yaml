@@ -1,0 +1,55 @@
+preferences:
+  - user_id: user-it
+    lang: it
+    channel_web: true
+    channel_email: false
+    channel_telegram: false
+    channel_whatsapp: false
+    max_per_day: 3
+    consents:
+      notifications: true
+
+  - user_id: user-en
+    lang: en
+    channel_web: true
+    channel_email: false
+    channel_telegram: false
+    channel_whatsapp: false
+    max_per_day: 3
+    consents:
+      notifications: true
+
+  - user_id: user-es
+    lang: es
+    channel_web: true
+    channel_email: false
+    channel_telegram: false
+    channel_whatsapp: false
+    max_per_day: 3
+    consents:
+      notifications: true
+
+  - user_id: user-ca
+    lang: ca
+    channel_web: true
+    channel_email: false
+    channel_telegram: false
+    channel_whatsapp: false
+    max_per_day: 3
+    consents:
+      notifications: true
+
+  # Utente “no lang”
+  - user_id: user-default
+    channel_web: true
+    max_per_day: 3
+    consents:
+      notifications: true
+
+  # Utente con notifications disabilitate
+  - user_id: user-no-consent
+    lang: it
+    channel_web: true
+    max_per_day: 3
+    consents:
+      notifications: false
