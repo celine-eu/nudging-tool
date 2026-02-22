@@ -10,7 +10,7 @@ DELETE /notifications/{id}       – soft-delete
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -96,7 +96,7 @@ async def mark_read(
         )
 
     if n.read_at is None:
-        n.read_at = datetime.utcnow()
+        n.read_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(n)
 
@@ -120,5 +120,5 @@ async def soft_delete_notification(
 ) -> None:
     n = await _get_own_notification(notification_id, user.sub, db)
     if n.deleted_at is None:
-        n.deleted_at = datetime.utcnow()
+        n.deleted_at = datetime.now(timezone.utc)
         await db.commit()

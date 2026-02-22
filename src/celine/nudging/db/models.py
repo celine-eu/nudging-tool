@@ -37,10 +37,10 @@ class Rule(Base):
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
 
     templates: Mapped[list["Template"]] = relationship(
@@ -86,7 +86,7 @@ class UserPreference(Base):
     consents: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
 
 
@@ -108,7 +108,7 @@ class NudgeLog(Base):
     # Audit payload: scenario, facts_version, facts, details
     payload: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
 
     __table_args__ = (UniqueConstraint("dedup_key", name="uq_nudges_dedup_key"),)
@@ -158,14 +158,14 @@ class Notification(Base):
 
     # User lifecycle
     read_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True, default=None
+        DateTime(timezone=True), nullable=True, default=None
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True, default=None
+        DateTime(timezone=True), nullable=True, default=None
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
 
     nudge_log: Mapped["NudgeLog | None"] = relationship(back_populates="notification")
@@ -187,9 +187,11 @@ class DeliveryLog(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
-    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class WebPushSubscription(Base):
@@ -207,8 +209,8 @@ class WebPushSubscription(Base):
 
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=utc_now, onupdate=utc_now, nullable=False
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
     )

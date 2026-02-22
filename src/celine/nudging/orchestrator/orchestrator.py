@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from celine.nudging.db.models import DeliveryLog, Notification, NudgeLog
+from celine.nudging.db.models import DeliveryLog, Notification, NudgeLog, utc_now
 from celine.nudging.orchestrator.models import Channel, DeliveryJob
 from celine.nudging.orchestrator.policies import can_send_today
 from celine.nudging.orchestrator.preferences import get_user_pref
@@ -58,7 +58,7 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
                 destination=job.destination,
                 status="suppressed",
                 error="rate_limited",
-                created_at=datetime.utcnow(),
+                created_at=utc_now,
                 sent_at=None,
             )
         )

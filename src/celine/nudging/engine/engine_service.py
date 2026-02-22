@@ -223,7 +223,7 @@ def _dedup_scope(rule: Rule, facts: dict) -> str:
         or facts.get("date")
         or facts.get("week")
         or facts.get("period")
-        or datetime.utcnow().strftime("%Y-%m")
+        or datetime.now(timezone.utc).strftime("%Y-%m")
     )
 
 

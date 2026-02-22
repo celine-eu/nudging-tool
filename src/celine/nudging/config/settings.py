@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from celine.sdk.settings.models import OidcSettings, PoliciesSettings
@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     )
 
     # General
+    SEED_DIR: Optional[str] = None
     DEFAULT_LANG: str = "en"
     ORCHESTRATOR_URL: str = "http://api.celine.localhost/nudging"
 

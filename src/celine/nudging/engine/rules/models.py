@@ -4,6 +4,8 @@ from enum import Enum
 from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
+from celine.nudging.db.models import utc_now
+
 
 class NudgeType(str, Enum):
     informative = "informative"
@@ -19,7 +21,7 @@ class NudgeSeverity(str, Enum):
 
 class DigitalTwinEvent(BaseModel):
     event_type: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
     user_id: str
 
     # raw refs, optional
@@ -41,4 +43,4 @@ class NudgeEvent(BaseModel):
     render_context: Dict[str, Any] = Field(default_factory=dict)
     title: str
     body: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
