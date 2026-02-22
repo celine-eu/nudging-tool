@@ -5,10 +5,12 @@ services:
       sh -c "
         .venv/bin/alembic upgrade head &&
         .venv/bin/python -m celine.nudging.db.seed_db
+        .venv/bin/nudging-cli vapid gen
       "
     environment:
       - SEED_DIR=/seed
     volumes:
+      - ./.env:/app/.env
       - ./src:/app/src
       - ./seed:/seed
     extra_hosts:

@@ -20,6 +20,7 @@ dependencies = [
   "pywebpush>=2.3.0",
   "pyyaml>=6.0.3",
   "sqlalchemy>=2.0.46",
+  "typer>=0.23.1",
   "uvicorn[standard]>=0.41.0",
 ]
 
@@ -80,3 +81,6 @@ patch_tags = ["fix", "perf", "up"]
 parse_squash_commits = true
 ignore_merge_commits = true
 
+
+[project.scripts]
+nudging-cli = "celine.nudging.cli.main:create_app"
