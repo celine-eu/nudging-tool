@@ -14,20 +14,7 @@ from celine.nudging.db.models import DeliveryLog, WebPushSubscription
 from celine.nudging.orchestrator.models import DeliveryJob
 from celine.nudging.publishers.base import Publisher, PublishResult
 from celine.nudging.config.settings import settings
-
-VAPID_SUBJECT = "mailto:you@celine.localhost"
-
-
-def _get_vapid_private_key() -> str | None:
-    key = settings.VAPID_PRIVATE_KEY
-    if not key:
-        return None
-
-    # se la PEM è stata messa con \n letterali
-    if "\\n" in key:
-        key = key.replace("\\n", "\n")
-
-    return key
+from celine.nudging.utils import get_vapid
 
 
 class WebPublisher(Publisher):
@@ -73,9 +60,9 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
         },
     }
 
-    vapid_private_key = _get_vapid_private_key()
+    vapid = get_vapid()
 
-    if not vapid_private_key:
+    if not vapid.private_key:
         last_error = "Missing VAPID_PRIVATE_KEY"
     elif not subscriptions:
         last_error = "no_subscriptions"
@@ -91,8 +78,8 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
                         },
                     },
                     data=json.dumps(payload),
-                    vapid_private_key=vapid_private_key,
-                    vapid_claims={"sub": VAPID_SUBJECT},
+                    vapid_private_key=vapid.private_key,
+                    vapid_claims={"sub": vapid.subject},
                 )
                 sent += 1
 

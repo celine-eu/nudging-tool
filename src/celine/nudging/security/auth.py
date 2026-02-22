@@ -59,6 +59,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         try:
             user = JwtUser.from_token(auth_header, settings.oidc)
         except Exception as exc:
+            logger.error(f"{auth_header}")
             logger.warning("JWT validation failed: %s", exc)
             return JSONResponse(
                 status_code=401,

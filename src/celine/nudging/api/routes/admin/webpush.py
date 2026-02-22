@@ -15,21 +15,13 @@ from celine.nudging.api.schemas import (
 )
 from celine.nudging.db.models import WebPushSubscription
 from celine.nudging.db.session import get_db
-from celine.nudging.config.settings import settings
 from celine.nudging.security.policies import require_admin
 from celine.sdk.auth import JwtUser
+from celine.nudging.utils import get_vapid
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-def _vapid_private_key() -> str:
-    return settings.VAPID_PRIVATE_KEY.strip()
-
-
-def _vapid_subject() -> str:
-    return settings.VAPID_SUBJECT.strip()
 
 
 @router.post(
@@ -59,6 +51,8 @@ async def send_test(
 
     payload = {"title": body.title, "body": body.body, "data": {"url": body.url}}
 
+    vapid = get_vapid()
+
     sent, failed = 0, 0
     for s in subs:
         try:
@@ -68,8 +62,8 @@ async def send_test(
                     "keys": {"p256dh": s.p256dh, "auth": s.auth},
                 },
                 data=json.dumps(payload),
-                vapid_private_key=_vapid_private_key(),
-                vapid_claims={"sub": _vapid_subject()},
+                vapid_private_key=vapid.private_key,
+                vapid_claims={"sub": vapid.subject},
             )
             sent += 1
         except WebPushException as e:

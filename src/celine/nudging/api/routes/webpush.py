@@ -30,7 +30,9 @@ router = APIRouter(prefix="/webpush", tags=["webpush"])
     summary="Get VAPID public key",
     description="Returns the VAPID public key needed by the browser to set up a push subscription.",
 )
-async def vapid_public_key() -> VapidPublicKeyResponse:
+async def vapid_public_key(
+    user: JwtUser = Depends(get_current_user),
+) -> VapidPublicKeyResponse:
     public_key = settings.VAPID_PUBLIC_KEY.strip()
     return VapidPublicKeyResponse(public_key=public_key)
 
