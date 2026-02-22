@@ -18,7 +18,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/ingest-event")
+@router.post("/admin/ingest-event")
 async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)):
     # --- base contract ---
     facts = evt.facts or {}

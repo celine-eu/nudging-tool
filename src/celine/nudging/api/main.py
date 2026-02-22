@@ -6,8 +6,15 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from celine.nudging.api.routes.ingest import router as ingest_router
+from celine.nudging.security.auth import AuthMiddleware
+
 from celine.nudging.api.routes.webpush import router as webpush_router
+from celine.nudging.api.routes.notifications import router as notifications_router
+
+from nudging.api.routes.admin_ingest import router as admin_ingest_router
+from nudging.api.routes.admin_notifications import (
+    router as admin_notifications_router,
+)
 
 load_dotenv()
 
@@ -18,8 +25,13 @@ STATIC_PATH = Path(os.getenv("STATIC_PATH", str(default_static_path))).resolve()
 
 app = FastAPI(title="nudging-tool-api", version="0.1.0")
 
-app.include_router(ingest_router, prefix="")
+app.add_middleware(AuthMiddleware)
+
 app.include_router(webpush_router)
+app.include_router(notifications_router)
+
+app.include_router(admin_ingest_router, prefix="")
+app.include_router(admin_notifications_router)
 
 
 if STATIC_PATH.exists():

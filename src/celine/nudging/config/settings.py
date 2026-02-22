@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from celine.sdk.settings.models import OidcSettings, PoliciesSettings
 
 
 class Settings(BaseSettings):
@@ -14,6 +15,13 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    oidc = OidcSettings(audience="svc-nudging")
+    policies = PoliciesSettings()
+
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_SUBJECT: str = "mailto:test@celine.localhost"
 
     # Database
     DATABASE_URL: str = (

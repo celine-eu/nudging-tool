@@ -11,20 +11,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from celine.nudging.db.models import WebPushSubscription
 from celine.nudging.db.session import get_db
+from celine.nudging.config.settings import settings
 
 router = APIRouter(prefix="/webpush", tags=["webpush"])
 
 
 def _vapid_public_key() -> str:
-    return (os.getenv("VAPID_PUBLIC_KEY") or "").strip()
+    return settings.VAPID_PUBLIC_KEY.strip()
 
 
 def _vapid_private_key() -> str:
-    return (os.getenv("VAPID_PRIVATE_KEY") or "").strip()
+    return settings.VAPID_PRIVATE_KEY.strip()
 
 
 def _vapid_subject() -> str:
-    return (os.getenv("VAPID_SUBJECT") or "mailto:test@example.com").strip()
+    return settings.VAPID_SUBJECT.strip()
 
 
 @router.get("/vapid-public-key")
@@ -91,7 +92,7 @@ async def unsubscribe(body: dict, db: AsyncSession = Depends(get_db)):
     return {"status": "ok"}
 
 
-@router.post("/send-test", response_model=None)
+@router.post("/admin/send-test", response_model=None)
 async def send_test(body: dict, db: AsyncSession = Depends(get_db)):
     user_id = body["user_id"]
     title = body.get("title", "Test")

@@ -38,3 +38,6 @@ htmlcov/
 
 # IDE/editor settings
 .idea/
+
+# Dumpster output
+.dumpster
