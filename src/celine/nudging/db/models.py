@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    String,
-    DateTime,
     Boolean,
-    Integer,
+    DateTime,
     ForeignKey,
-    Text,
+    Integer,
     JSON,
+    String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -28,13 +29,9 @@ class Rule(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    family: Mapped[str] = mapped_column(String(50), nullable=False)  # energy/price/...
-    type: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # informative/opportunity/alert
-    severity: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # info/warning/critical
+    family: Mapped[str] = mapped_column(String(50), nullable=False)
+    type: Mapped[str] = mapped_column(String(20), nullable=False)
+    severity: Mapped[str] = mapped_column(String(20), nullable=False)
 
     definition: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
@@ -49,7 +46,6 @@ class Rule(Base):
     templates: Mapped[list["Template"]] = relationship(
         back_populates="rule", cascade="all, delete-orphan"
     )
-    # TODO: dedup rule
 
 
 class Template(Base):
@@ -58,7 +54,6 @@ class Template(Base):
     rule_id: Mapped[str] = mapped_column(
         ForeignKey("rules.id", ondelete="CASCADE"), nullable=False
     )
-
     lang: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
     title_jinja: Mapped[str] = mapped_column(Text, nullable=False)
     body_jinja: Mapped[str] = mapped_column(Text, nullable=False)
@@ -96,18 +91,73 @@ class UserPreference(Base):
 
 
 class NudgeLog(Base):
+    """Engine audit log. One row per engine evaluation outcome (created, suppressed, etc.).
+    Not user-facing. read_at / deleted_at do NOT belong here.
+    """
+
     __tablename__ = "nudges_log"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     rule_id: Mapped[str] = mapped_column(String(64), nullable=False)
     user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     dedup_key: Mapped[str] = mapped_column(String(255), nullable=False)
 
+    # EngineResultStatus value: created | not_triggered | missing_facts |
+    #                           unknown_scenario | suppressed_dedup
     status: Mapped[str] = mapped_column(String(30), default="created", nullable=False)
+
+    # Audit payload: scenario, facts_version, facts, details
     payload: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=utc_now, nullable=False
     )
 
+    __table_args__ = (UniqueConstraint("dedup_key", name="uq_nudges_dedup_key"),)
+
+    notification: Mapped["Notification | None"] = relationship(
+        back_populates="nudge_log", uselist=False
+    )
+
+
+class Notification(Base):
+    """User-facing notification. Created only when the engine produces a CREATED nudge
+    and it passes orchestration. Tracks delivery status and user lifecycle (read, deleted).
+    """
+
+    __tablename__ = "notifications"
+
+    id: Mapped[str] = mapped_column(
+        String(64), primary_key=True
+    )  # own uuid, not nudge_log.id
+
+    # Traceability back to the engine audit row
+    nudge_log_id: Mapped[str] = mapped_column(
+        ForeignKey("nudges_log.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    # Denormalised from NudgeLog / Rule for query convenience
+    rule_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    community_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    # Rule metadata (flat – avoids joins on hot read path)
+    family: Mapped[str] = mapped_column(String(50), nullable=False)
+    type: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # informative | opportunity | alert
+    severity: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # info | warning | critical
+
+    # Rendered content
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Delivery status: pending | sent | suppressed | failed
+    status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)
+
+    # User lifecycle
     read_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, default=None
     )
@@ -115,7 +165,15 @@ class NudgeLog(Base):
         DateTime, nullable=True, default=None
     )
 
-    __table_args__ = (UniqueConstraint("dedup_key", name="uq_nudges_dedup_key"),)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utc_now, nullable=False
+    )
+
+    nudge_log: Mapped["NudgeLog | None"] = relationship(back_populates="notification")
+
+    __table_args__ = (
+        UniqueConstraint("nudge_log_id", name="uq_notification_nudge_log"),
+    )
 
 
 class DeliveryLog(Base):
@@ -141,7 +199,7 @@ class WebPushSubscription(Base):
         UniqueConstraint("user_id", "endpoint", name="uq_webpush_user_endpoint"),
     )
 
-    id: Mapped[str] = mapped_column(String, primary_key=True)  # uuid
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
     community_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
 

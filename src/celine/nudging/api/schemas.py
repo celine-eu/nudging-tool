@@ -1,8 +1,4 @@
-"""Shared Pydantic schemas for the nudging API.
-
-All request bodies and response models live here so they appear correctly
-in the FastAPI/OpenAPI docs and can be reused across routers.
-"""
+"""Shared Pydantic schemas for the nudging API."""
 
 from __future__ import annotations
 
@@ -18,8 +14,6 @@ from pydantic import BaseModel, Field
 
 
 class StatusResponse(BaseModel):
-    """Generic operation acknowledgement."""
-
     status: str = Field(..., examples=["ok"])
 
 
@@ -28,27 +22,23 @@ class StatusResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class NotificationPayload(BaseModel):
-    """The rendered nudge content stored inside NudgeLog.payload."""
-
-    title: str
-    body: str
-    scenario: str | None = None
-    facts_version: str | None = None
-    facts: dict[str, Any] = Field(default_factory=dict)
-
-
 class NotificationOut(BaseModel):
-    """A single notification as returned to the end user."""
+    """User-facing notification. Fields are proper columns, not buried JSON."""
 
-    id: str = Field(..., description="Nudge ID (hex UUID)")
+    id: str
+    nudge_log_id: str | None = Field(None, description="Originating engine audit row")
     rule_id: str
     user_id: str
-    status: str = Field(..., description="created | sent | suppressed | failed")
-    payload: NotificationPayload
-    created_at: datetime
+    community_id: str | None = None
+    family: str = Field(..., description="energy | onboarding | seasonal | …")
+    type: str = Field(..., description="informative | opportunity | alert")
+    severity: str = Field(..., description="info | warning | critical")
+    title: str
+    body: str
+    status: str = Field(..., description="pending | sent | suppressed | failed")
     read_at: datetime | None = Field(None, description="Null if unread")
     deleted_at: datetime | None = Field(None, description="Null if not soft-deleted")
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -59,16 +49,22 @@ class NotificationOut(BaseModel):
 
 
 class AdminNotificationOut(BaseModel):
-    """A notification as returned to admin callers (same shape, explicit class)."""
+    """Admin view – same fields, explicit class for OpenAPI separation."""
 
     id: str
+    nudge_log_id: str | None = None
     rule_id: str
     user_id: str
+    community_id: str | None = None
+    family: str
+    type: str
+    severity: str
+    title: str
+    body: str
     status: str
-    payload: NotificationPayload
-    created_at: datetime
     read_at: datetime | None = None
     deleted_at: datetime | None = None
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -79,8 +75,6 @@ class AdminNotificationOut(BaseModel):
 
 
 class DeliveryJobOut(BaseModel):
-    """A delivery job returned inside an ingest response."""
-
     job_id: str
     user_id: str
     rule_id: str
@@ -94,8 +88,6 @@ class DeliveryJobOut(BaseModel):
 
 
 class EngineResultOut(BaseModel):
-    """A single suppressed/non-triggered engine result."""
-
     status: str
     reason: str | None = None
     details: dict[str, Any] | None = None
@@ -108,16 +100,12 @@ class NudgeCreatedItem(BaseModel):
 
 
 class IngestOkResponse(BaseModel):
-    """All nudges created and at least one delivery dispatched."""
-
     status: str = Field("ok", examples=["ok"])
     created: list[NudgeCreatedItem]
     suppressed: list[EngineResultOut]
 
 
 class IngestAcceptedResponse(BaseModel):
-    """Nudges created but all deliveries suppressed by the orchestrator."""
-
     status: str = Field("accepted", examples=["accepted"])
     delivery: str = Field("suppressed", examples=["suppressed"])
     created: list[NudgeCreatedItem]
@@ -125,8 +113,6 @@ class IngestAcceptedResponse(BaseModel):
 
 
 class IngestErrorDetail(BaseModel):
-    """Shared error envelope for 409 / 422 / 400 / 500 ingest responses."""
-
     error: str
     reason: str | None = None
     errors: list[str] | None = None
@@ -149,20 +135,14 @@ class WebPushSubscriptionIn(BaseModel):
 
 
 class SubscribeRequest(BaseModel):
-    """
-    user_id is intentionally absent – it is derived from the JWT (user.sub).
-    community_id is the only caller-supplied identity field.
-    """
+    """user_id is derived from the JWT – not accepted from the caller."""
 
     community_id: str | None = None
     subscription: WebPushSubscriptionIn
 
 
 class UnsubscribeRequest(BaseModel):
-    """
-    user_id is intentionally absent – derived from the JWT.
-    Only the endpoint is needed to identify which subscription to disable.
-    """
+    """user_id is derived from the JWT – not accepted from the caller."""
 
     endpoint: str
 

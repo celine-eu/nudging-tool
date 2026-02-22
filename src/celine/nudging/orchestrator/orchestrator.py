@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from celine.nudging.db.models import DeliveryLog, NudgeLog
+from celine.nudging.db.models import DeliveryLog, Notification, NudgeLog
 from celine.nudging.orchestrator.models import Channel, DeliveryJob
 from celine.nudging.orchestrator.policies import can_send_today
 from celine.nudging.orchestrator.preferences import get_user_pref
@@ -14,14 +14,19 @@ from celine.nudging.publishers.registry import get_publisher
 
 
 async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
-    # load nudge log (contains title/body in payload)
-    res = await db.execute(select(NudgeLog).where(NudgeLog.id == nudge_id))
-    n = res.scalar_one()
+    # Load the audit log row (contains rule_id, user_id, dedup_key)
+    nudge_log_res = await db.execute(select(NudgeLog).where(NudgeLog.id == nudge_id))
+    n = nudge_log_res.scalar_one()
+
+    # Load the linked notification (title, body, status live here now)
+    notif_res = await db.execute(
+        select(Notification).where(Notification.nudge_log_id == nudge_id)
+    )
+    notification = notif_res.scalar_one()
 
     pref = await get_user_pref(db, n.user_id)
     max_per_day = pref.max_per_day if pref else 3
 
-    # count sent today (simple version: delivery_log status=sent)
     today = date.today()
     cnt_res = await db.execute(
         select(func.count(DeliveryLog.id)).where(
@@ -32,7 +37,6 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
     )
     sent_today = int(cnt_res.scalar() or 0)
 
-    # build job (sempre, così lo puoi loggare anche se suppressed)
     job = DeliveryJob(
         user_id=n.user_id,
         job_id=uuid4().hex,
@@ -40,12 +44,11 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
         nudge_id=n.id,
         channel=Channel.web,
         destination=f"web:{n.user_id}",
-        title=n.payload.get("title", ""),
-        body=n.payload.get("body", ""),
+        title=notification.title,
+        body=notification.body,
         dedup_key=n.dedup_key,
     )
 
-    # rate limit -> suppressed (MA lo registriamo a DB)
     if not can_send_today(sent_today, max_per_day):
         db.add(
             DeliveryLog(
@@ -59,20 +62,19 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
                 sent_at=None,
             )
         )
-        n.status = "suppressed"
+        notification.status = "suppressed"
         await db.commit()
         return []
 
     publisher = get_publisher(job.channel)
     result = await publisher.send(db, job)
 
-    # Nudge status coerente con esito delivery
     if result.status == "sent":
-        n.status = "sent"
+        notification.status = "sent"
     elif result.status == "suppressed":
-        n.status = "suppressed"
+        notification.status = "suppressed"
     else:
-        n.status = "failed"
+        notification.status = "failed"
 
     await db.commit()
     return [job]
