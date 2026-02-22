@@ -1,17 +1,25 @@
 from __future__ import annotations
 
-import json
-import os
 import uuid
+import logging
 
-from fastapi import APIRouter, Depends, Request
-from pywebpush import WebPushException, webpush
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from celine.nudging.api.schemas import (
+    StatusResponse,
+    SubscribeRequest,
+    UnsubscribeRequest,
+    VapidPublicKeyResponse,
+)
 from celine.nudging.db.models import WebPushSubscription
 from celine.nudging.db.session import get_db
 from celine.nudging.config.settings import settings
+from celine.nudging.security.policies import get_current_user
+from celine.sdk.auth.jwt import JwtUser
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/webpush", tags=["webpush"])
 
@@ -28,26 +36,36 @@ def _vapid_subject() -> str:
     return settings.VAPID_SUBJECT.strip()
 
 
-@router.get("/vapid-public-key")
-async def vapid_public_key():
-    return {"public_key": _vapid_public_key()}
+@router.get(
+    "/vapid-public-key",
+    response_model=VapidPublicKeyResponse,
+    summary="Get VAPID public key",
+    description="Returns the VAPID public key needed by the browser to set up a push subscription.",
+)
+async def vapid_public_key() -> VapidPublicKeyResponse:
+    return VapidPublicKeyResponse(public_key=_vapid_public_key())
 
 
-@router.post("/subscribe", response_model=None)
-async def subscribe(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
-    # Per test: prendo user_id dal body (in prod: da auth)
-    user_id = body["user_id"]
-    community_id = body.get("community_id")
-    sub = body["subscription"]
-
-    endpoint = sub["endpoint"]
-    p256dh = sub["keys"]["p256dh"]
-    auth = sub["keys"]["auth"]
-
+@router.post(
+    "/subscribe",
+    response_model=StatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Register a push subscription",
+    description=(
+        "Registers or updates a Web Push subscription for the authenticated user. "
+        "The user identity is taken from the JWT – callers cannot register on behalf of others. "
+        "If the endpoint already exists for that user, its keys are refreshed."
+    ),
+)
+async def subscribe(
+    body: SubscribeRequest,
+    user: JwtUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StatusResponse:
     q = await db.execute(
         select(WebPushSubscription).where(
-            WebPushSubscription.user_id == user_id,
-            WebPushSubscription.endpoint == endpoint,
+            WebPushSubscription.user_id == user.sub,
+            WebPushSubscription.endpoint == body.subscription.endpoint,
         )
     )
     row = q.scalar_one_or_none()
@@ -55,33 +73,42 @@ async def subscribe(body: dict, request: Request, db: AsyncSession = Depends(get
     if row is None:
         row = WebPushSubscription(
             id=str(uuid.uuid4()),
-            user_id=user_id,
-            community_id=community_id,
-            endpoint=endpoint,
-            p256dh=p256dh,
-            auth=auth,
+            user_id=user.sub,
+            community_id=body.community_id,
+            endpoint=body.subscription.endpoint,
+            p256dh=body.subscription.keys.p256dh,
+            auth=body.subscription.keys.auth,
             enabled=True,
         )
         db.add(row)
     else:
-        row.community_id = community_id
-        row.p256dh = p256dh
-        row.auth = auth
+        row.community_id = body.community_id
+        row.p256dh = body.subscription.keys.p256dh
+        row.auth = body.subscription.keys.auth
         row.enabled = True
 
     await db.commit()
-    return {"status": "ok"}
+    return StatusResponse(status="ok")
 
 
-@router.post("/unsubscribe", response_model=None)
-async def unsubscribe(body: dict, db: AsyncSession = Depends(get_db)):
-    user_id = body["user_id"]
-    endpoint = body["endpoint"]
-
+@router.post(
+    "/unsubscribe",
+    response_model=StatusResponse,
+    summary="Remove a push subscription",
+    description=(
+        "Disables the push subscription identified by endpoint for the authenticated user. "
+        "The user identity is taken from the JWT – callers cannot remove others' subscriptions."
+    ),
+)
+async def unsubscribe(
+    body: UnsubscribeRequest,
+    user: JwtUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StatusResponse:
     q = await db.execute(
         select(WebPushSubscription).where(
-            WebPushSubscription.user_id == user_id,
-            WebPushSubscription.endpoint == endpoint,
+            WebPushSubscription.user_id == user.sub,
+            WebPushSubscription.endpoint == body.endpoint,
         )
     )
     row = q.scalar_one_or_none()
@@ -89,47 +116,4 @@ async def unsubscribe(body: dict, db: AsyncSession = Depends(get_db)):
         row.enabled = False
         await db.commit()
 
-    return {"status": "ok"}
-
-
-@router.post("/admin/send-test", response_model=None)
-async def send_test(body: dict, db: AsyncSession = Depends(get_db)):
-    user_id = body["user_id"]
-    title = body.get("title", "Test")
-    msg = body.get("body", "Hello!")
-    url = body.get("url", "/")
-
-    # carica subscription
-    q = await db.execute(
-        select(WebPushSubscription).where(
-            WebPushSubscription.user_id == user_id,
-            WebPushSubscription.enabled.is_(True),
-        )
-    )
-    subs = q.scalars().all()
-    if not subs:
-        return {"status": "no_subscriptions"}
-
-    payload = {"title": title, "body": msg, "data": {"url": url}}
-
-    sent, failed = 0, 0
-    for s in subs:
-        try:
-            webpush(
-                subscription_info={
-                    "endpoint": s.endpoint,
-                    "keys": {"p256dh": s.p256dh, "auth": s.auth},
-                },
-                data=json.dumps(payload),
-                vapid_private_key=_vapid_private_key(),
-                vapid_claims={"sub": _vapid_subject()},
-            )
-            sent += 1
-        except WebPushException as e:
-            failed += 1
-            status = getattr(e.response, "status_code", None)
-            if status in (404, 410):
-                s.enabled = False
-
-    await db.commit()
-    return {"status": "ok", "sent": sent, "failed": failed}
+    return StatusResponse(status="ok")

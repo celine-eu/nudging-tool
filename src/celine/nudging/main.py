@@ -11,10 +11,7 @@ from celine.nudging.security.auth import AuthMiddleware
 from celine.nudging.api.routes.webpush import router as webpush_router
 from celine.nudging.api.routes.notifications import router as notifications_router
 
-from celine.nudging.api.routes.admin_ingest import router as admin_ingest_router
-from celine.nudging.api.routes.admin_notifications import (
-    router as admin_notifications_router,
-)
+from celine.nudging.api.routes.admin import admin_routers
 
 load_dotenv()
 
@@ -30,9 +27,8 @@ app.add_middleware(AuthMiddleware)
 app.include_router(webpush_router)
 app.include_router(notifications_router)
 
-app.include_router(admin_ingest_router, prefix="")
-app.include_router(admin_notifications_router)
-
+for ar in admin_routers:
+    app.include_router(ar, prefix="")
 
 if STATIC_PATH.exists():
     app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")

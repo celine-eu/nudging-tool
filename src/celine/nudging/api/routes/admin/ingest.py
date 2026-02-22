@@ -6,19 +6,46 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from celine.nudging.api.schemas import (
+    IngestAcceptedResponse,
+    IngestErrorDetail,
+    IngestOkResponse,
+)
 from celine.nudging.db.session import get_db
 from celine.nudging.engine.engine_service import EngineResultStatus, run_engine_batch
 from celine.nudging.engine.rules.contract import validate_facts_contract
 from celine.nudging.engine.rules.models import DigitalTwinEvent
 from celine.nudging.orchestrator.orchestrator import orchestrate
 
-router = APIRouter()
-
+router = APIRouter(tags=["admin"])
 
 logger = logging.getLogger(__name__)
 
 
-@router.post("/admin/ingest-event")
+@router.post(
+    "/admin/ingest-event",
+    summary="Ingest a Digital Twin event",
+    description=(
+        "Accepts an enriched Digital Twin event, evaluates nudging rules, "
+        "and dispatches deliveries for any triggered nudges."
+    ),
+    response_model=IngestOkResponse,
+    responses={
+        202: {
+            "description": "Nudges created but all deliveries suppressed by the orchestrator",
+            "model": IngestAcceptedResponse,
+        },
+        204: {"description": "No rules triggered"},
+        400: {"description": "Unknown scenario", "model": IngestErrorDetail},
+        409: {
+            "description": "All rules suppressed by dedup",
+            "model": IngestErrorDetail,
+        },
+        422: {"description": "Invalid or missing facts", "model": IngestErrorDetail},
+        500: {"description": "Unexpected engine failure", "model": IngestErrorDetail},
+    },
+    status_code=200,
+)
 async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)):
     # --- base contract ---
     facts = evt.facts or {}
@@ -41,7 +68,6 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
     # --- run engine (BATCH) ---
     results = await run_engine_batch(evt, db)
 
-    # created nudges
     created = [r for r in results if r.status == EngineResultStatus.CREATED and r.nudge]
     if created:
         created_payload = []
@@ -51,8 +77,8 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
             nudge = r.nudge
 
             if nudge is None:
-                logger.warning(f"Skipping empty nudge")
-                logger.debug(f"{r}")
+                logger.warning("Skipping empty nudge")
+                logger.debug("%s", r)
                 continue
 
             jobs = await orchestrate(db, nudge.nudge_id)
@@ -68,7 +94,12 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
                 }
             )
 
-        # if nudges created but ALL deliveries suppressed by orchestrator
+        suppressed_payload = [
+            {"status": r.status, "reason": r.reason, "details": r.details}
+            for r in results
+            if r.status != EngineResultStatus.CREATED
+        ]
+
         if not any_jobs:
             return JSONResponse(
                 status_code=status.HTTP_202_ACCEPTED,
@@ -76,32 +107,22 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
                     "status": "accepted",
                     "delivery": "suppressed",
                     "created": created_payload,
-                    "suppressed": [
-                        {"status": r.status, "reason": r.reason, "details": r.details}
-                        for r in results
-                        if r.status != EngineResultStatus.CREATED
-                    ],
+                    "suppressed": suppressed_payload,
                 },
             )
 
         return {
             "status": "ok",
             "created": created_payload,
-            "suppressed": [
-                {"status": r.status, "reason": r.reason, "details": r.details}
-                for r in results
-                if r.status != EngineResultStatus.CREATED
-            ],
+            "suppressed": suppressed_payload,
         }
 
-    # --- no nudges created -> aggregate suppression result ---
+    # --- no nudges created ---
     statuses = {r.status for r in results}
 
-    # All rules evaluated, none triggered
     if statuses == {EngineResultStatus.NOT_TRIGGERED}:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    # All rules suppressed by dedup
     if statuses == {EngineResultStatus.SUPPRESSED_DEDUP}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -115,7 +136,6 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
             },
         )
 
-    # Any missing facts -> 422
     if EngineResultStatus.MISSING_FACTS in statuses:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -128,7 +148,6 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
             },
         )
 
-    # Any unknown scenario / config -> 400
     if EngineResultStatus.UNKNOWN_SCENARIO in statuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -141,7 +160,6 @@ async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)
             },
         )
 
-    # Fallback
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail={

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from pywebpush import WebPushException, webpush
@@ -13,12 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from celine.nudging.db.models import DeliveryLog, WebPushSubscription
 from celine.nudging.orchestrator.models import DeliveryJob
 from celine.nudging.publishers.base import Publisher, PublishResult
+from celine.nudging.config.settings import settings
 
-VAPID_SUBJECT = "mailto:you@example.com"
+VAPID_SUBJECT = "mailto:you@celine.localhost"
 
 
 def _get_vapid_private_key() -> str | None:
-    key = os.getenv("VAPID_PRIVATE_KEY")
+    key = settings.VAPID_PRIVATE_KEY
     if not key:
         return None
 
@@ -47,7 +48,7 @@ def _endpoint_suffix(endpoint: str) -> str:
 
 
 async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Load enabled subscriptions
     result = await db.execute(

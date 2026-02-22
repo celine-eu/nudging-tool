@@ -4,7 +4,7 @@ tasks:
   debug:
     desc: "Run development server with debugger"
     cmds:
-      - DEBUG_ATTACH=nowait DEBUG_PORT=48016 uv run hypercorn celine.nudging.api.main:app --bind 0.0.0.0:8016
+      - DEBUG_ATTACH=nowait DEBUG_PORT=48016 uv run hypercorn celine.nudging.main:app --bind 0.0.0.0:8016
 
   test:
     desc: Run tests

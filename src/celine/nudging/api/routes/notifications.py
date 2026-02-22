@@ -3,25 +3,24 @@
 All routes require a valid user token (enforced by AuthMiddleware).
 Operations are scoped to the authenticated user's own notifications only.
 
-GET    /notifications          – list own notifications (excludes soft-deleted)
-PUT    /notifications/{id}     – mark as read (idempotent)
-DELETE /notifications/{id}     – soft-delete
+GET    /notifications            – list own notifications (excludes soft-deleted)
+PUT    /notifications/{nudge_id} – mark as read (idempotent)
+DELETE /notifications/{nudge_id} – soft-delete
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from celine.nudging.security.policies import get_current_user
+from celine.nudging.api.schemas import NotificationOut
 from celine.nudging.db.models import NudgeLog
 from celine.nudging.db.session import get_db
+from celine.nudging.security.policies import get_current_user
 from celine.sdk.auth import JwtUser
 
 logger = logging.getLogger(__name__)
@@ -30,34 +29,12 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
 # ---------------------------------------------------------------------------
-# Response schema
-# ---------------------------------------------------------------------------
-
-
-class NotificationOut(BaseModel):
-    id: str
-    rule_id: str
-    user_id: str
-    status: str
-    payload: dict[str, Any]
-    created_at: datetime
-    read_at: datetime | None
-    deleted_at: datetime | None
-
-    model_config = {"from_attributes": True}
-
-
-# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-async def _get_own_nudge(
-    nudge_id: str,
-    user_id: str,
-    db: AsyncSession,
-) -> NudgeLog:
-    """Fetch a NudgeLog row that belongs to the current user, or raise 404."""
+async def _get_own_nudge(nudge_id: str, user_id: str, db: AsyncSession) -> NudgeLog:
+    """Fetch a NudgeLog row owned by the current user, or raise 404."""
     result = await db.execute(
         select(NudgeLog).where(
             NudgeLog.id == nudge_id,
@@ -77,15 +54,24 @@ async def _get_own_nudge(
 # ---------------------------------------------------------------------------
 
 
-@router.get("", response_model=list[NotificationOut])
+@router.get(
+    "",
+    response_model=list[NotificationOut],
+    summary="List my notifications",
+    description=(
+        "Returns the caller's notifications ordered newest-first. "
+        "Soft-deleted entries are always excluded."
+    ),
+)
 async def list_notifications(
-    limit: int = Query(default=50, ge=1, le=200),
-    offset: int = Query(default=0, ge=0),
-    unread_only: bool = Query(default=False),
+    limit: int = Query(default=50, ge=1, le=200, description="Max results to return"),
+    offset: int = Query(default=0, ge=0, description="Pagination offset"),
+    unread_only: bool = Query(
+        default=False, description="Return only unread notifications"
+    ),
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[NudgeLog]:
-    """Return the caller's notifications, excluding soft-deleted ones."""
     q = (
         select(NudgeLog)
         .where(
@@ -103,13 +89,21 @@ async def list_notifications(
     return list(result.scalars().all())
 
 
-@router.put("/{nudge_id}", response_model=NotificationOut)
+@router.put(
+    "/{nudge_id}",
+    response_model=NotificationOut,
+    summary="Mark notification as read",
+    description="Marks a notification as read. Idempotent – safe to call multiple times.",
+    responses={
+        404: {"description": "Notification not found"},
+        410: {"description": "Notification has been deleted"},
+    },
+)
 async def mark_read(
     nudge_id: str,
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> NudgeLog:
-    """Mark a notification as read. Idempotent – succeeds even if already read."""
     nudge = await _get_own_nudge(nudge_id, user.sub, db)
 
     if nudge.deleted_at is not None:
@@ -119,20 +113,30 @@ async def mark_read(
         )
 
     if nudge.read_at is None:
-        nudge.read_at = datetime.utcnow()
+        nudge.read_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(nudge)
 
     return nudge
 
 
-@router.delete("/{nudge_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{nudge_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a notification",
+    description=(
+        "Soft-deletes a notification. Idempotent – returns 204 even if already deleted."
+    ),
+    responses={
+        204: {"description": "Deleted (or was already deleted)"},
+        404: {"description": "Notification not found or belongs to another user"},
+    },
+)
 async def soft_delete_notification(
     nudge_id: str,
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Soft-delete a notification. Idempotent."""
     nudge = await _get_own_nudge(nudge_id, user.sub, db)
 
     if nudge.deleted_at is None:

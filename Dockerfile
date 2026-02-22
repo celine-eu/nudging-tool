@@ -32,4 +32,4 @@ RUN uv sync --no-editable
 # COPY alembic.ini ./
 
 EXPOSE 8016
-CMD [".venv/bin/hypercorn", "celine.nudging.api.main:app", "--bind", "0.0.0.0:8016"]
+CMD [".venv/bin/hypercorn", "celine.nudging.main:app", "--bind", "0.0.0.0:8016"]
