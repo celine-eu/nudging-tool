@@ -24,18 +24,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webpush", tags=["webpush"])
 
 
-def _vapid_public_key() -> str:
-    return settings.VAPID_PUBLIC_KEY.strip()
-
-
-def _vapid_private_key() -> str:
-    return settings.VAPID_PRIVATE_KEY.strip()
-
-
-def _vapid_subject() -> str:
-    return settings.VAPID_SUBJECT.strip()
-
-
 @router.get(
     "/vapid-public-key",
     response_model=VapidPublicKeyResponse,
@@ -43,7 +31,8 @@ def _vapid_subject() -> str:
     description="Returns the VAPID public key needed by the browser to set up a push subscription.",
 )
 async def vapid_public_key() -> VapidPublicKeyResponse:
-    return VapidPublicKeyResponse(public_key=_vapid_public_key())
+    public_key = settings.VAPID_PUBLIC_KEY.strip()
+    return VapidPublicKeyResponse(public_key=public_key)
 
 
 @router.post(
@@ -74,7 +63,6 @@ async def subscribe(
         row = WebPushSubscription(
             id=str(uuid.uuid4()),
             user_id=user.sub,
-            community_id=body.community_id,
             endpoint=body.subscription.endpoint,
             p256dh=body.subscription.keys.p256dh,
             auth=body.subscription.keys.auth,
@@ -82,7 +70,6 @@ async def subscribe(
         )
         db.add(row)
     else:
-        row.community_id = body.community_id
         row.p256dh = body.subscription.keys.p256dh
         row.auth = body.subscription.keys.auth
         row.enabled = True

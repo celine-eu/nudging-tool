@@ -21,7 +21,7 @@ from celine.sdk.auth import JwtUser
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/webpush", tags=["webpush"])
+router = APIRouter()
 
 
 def _vapid_private_key() -> str:
@@ -33,9 +33,8 @@ def _vapid_subject() -> str:
 
 
 @router.post(
-    "/admin/send-test",
+    "/webpush/send-test",
     response_model=SendTestResponse,
-    tags=["admin"],
     summary="Send a test push notification",
     description=(
         "Sends a test Web Push notification to all active subscriptions for a given user. "

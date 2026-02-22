@@ -1,8 +1,8 @@
-"""initial
+"""init
 
-Revision ID: 7fc90f29e970
+Revision ID: 8a2a854458f2
 Revises: 
-Create Date: 2026-02-22 16:22:58.535991
+Create Date: 2026-02-22 16:38:56.679366
 
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7fc90f29e970'
+revision: str = '8a2a854458f2'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -75,7 +75,6 @@ def upgrade() -> None:
     op.create_table('web_push_subscriptions',
     sa.Column('id', sa.String(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
-    sa.Column('community_id', sa.String(), nullable=True),
     sa.Column('endpoint', sa.Text(), nullable=False),
     sa.Column('p256dh', sa.Text(), nullable=False),
     sa.Column('auth', sa.Text(), nullable=False),
@@ -85,14 +84,12 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'endpoint', name='uq_webpush_user_endpoint')
     )
-    op.create_index(op.f('ix_web_push_subscriptions_community_id'), 'web_push_subscriptions', ['community_id'], unique=False)
     op.create_index(op.f('ix_web_push_subscriptions_user_id'), 'web_push_subscriptions', ['user_id'], unique=False)
     op.create_table('notifications',
     sa.Column('id', sa.String(length=64), nullable=False),
     sa.Column('nudge_log_id', sa.String(length=64), nullable=True),
     sa.Column('rule_id', sa.String(length=64), nullable=False),
     sa.Column('user_id', sa.String(length=128), nullable=False),
-    sa.Column('community_id', sa.String(length=128), nullable=True),
     sa.Column('family', sa.String(length=50), nullable=False),
     sa.Column('type', sa.String(length=20), nullable=False),
     sa.Column('severity', sa.String(length=20), nullable=False),
@@ -128,7 +125,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_notifications_nudge_log_id'), table_name='notifications')
     op.drop_table('notifications')
     op.drop_index(op.f('ix_web_push_subscriptions_user_id'), table_name='web_push_subscriptions')
-    op.drop_index(op.f('ix_web_push_subscriptions_community_id'), table_name='web_push_subscriptions')
     op.drop_table('web_push_subscriptions')
     op.drop_table('user_preferences')
     op.drop_table('rules')

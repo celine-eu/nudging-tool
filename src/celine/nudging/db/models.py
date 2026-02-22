@@ -139,7 +139,6 @@ class Notification(Base):
     # Denormalised from NudgeLog / Rule for query convenience
     rule_id: Mapped[str] = mapped_column(String(64), nullable=False)
     user_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
-    community_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # Rule metadata (flat – avoids joins on hot read path)
     family: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -201,7 +200,6 @@ class WebPushSubscription(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
-    community_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
 
     endpoint: Mapped[str] = mapped_column(Text, nullable=False)
     p256dh: Mapped[str] = mapped_column(Text, nullable=False)

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.post(
-    "/admin/ingest-event",
+    "/ingest-event",
     summary="Ingest a Digital Twin event",
     description=(
         "Accepts an enriched Digital Twin event, evaluates nudging rules, "

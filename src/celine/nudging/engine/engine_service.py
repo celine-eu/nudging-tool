@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 
@@ -410,9 +410,8 @@ async def _run_single_rule(
         )
 
     ctx = {
-        "now": datetime.utcnow().isoformat(),
+        "now": datetime.now(timezone.utc).isoformat(),
         "user_id": evt.user_id,
-        "community_id": evt.community_id,
         **facts,
     }
     title, body = render(tmpl.title_jinja, tmpl.body_jinja, ctx)
@@ -424,7 +423,6 @@ async def _run_single_rule(
         type=NudgeType(rule.type),
         severity=NudgeSeverity(rule.severity),
         user_id=evt.user_id,
-        community_id=evt.community_id,
         facts=facts,
         render_context=ctx,
         title=title,
@@ -451,7 +449,6 @@ async def _run_single_rule(
             nudge_log_id=nudge.nudge_id,
             rule_id=str(rule.id),
             user_id=nudge.user_id,
-            community_id=nudge.community_id,
             family=nudge.family,
             type=nudge.type.value,
             severity=nudge.severity.value,

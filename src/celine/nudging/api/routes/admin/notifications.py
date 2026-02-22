@@ -16,7 +16,7 @@ from celine.sdk.auth import JwtUser
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin/notifications", tags=["admin"])
+router = APIRouter(prefix="/notifications", tags=["admin"])
 
 
 @router.get(

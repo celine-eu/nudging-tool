@@ -29,7 +29,6 @@ class NotificationOut(BaseModel):
     nudge_log_id: str | None = Field(None, description="Originating engine audit row")
     rule_id: str
     user_id: str
-    community_id: str | None = None
     family: str = Field(..., description="energy | onboarding | seasonal | …")
     type: str = Field(..., description="informative | opportunity | alert")
     severity: str = Field(..., description="info | warning | critical")
@@ -55,7 +54,6 @@ class AdminNotificationOut(BaseModel):
     nudge_log_id: str | None = None
     rule_id: str
     user_id: str
-    community_id: str | None = None
     family: str
     type: str
     severity: str
@@ -137,7 +135,6 @@ class WebPushSubscriptionIn(BaseModel):
 class SubscribeRequest(BaseModel):
     """user_id is derived from the JWT – not accepted from the caller."""
 
-    community_id: str | None = None
     subscription: WebPushSubscriptionIn
 
 

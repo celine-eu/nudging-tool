@@ -13,24 +13,33 @@ from celine.nudging.api.routes.notifications import router as notifications_rout
 
 from celine.nudging.api.routes.admin import admin_routers
 
-load_dotenv()
 
-logger = logging.getLogger(__name__)
+def create_app():
 
-default_static_path = Path(__file__).resolve().parents[1] / "tests" / "static"
-STATIC_PATH = Path(os.getenv("STATIC_PATH", str(default_static_path))).resolve()
+    load_dotenv()
 
-app = FastAPI(title="nudging-tool-api", version="0.1.0")
+    logger = logging.getLogger(__name__)
 
-app.add_middleware(AuthMiddleware)
+    default_static_path = Path(__file__).resolve().parents[1] / "tests" / "static"
+    STATIC_PATH = Path(os.getenv("STATIC_PATH", str(default_static_path))).resolve()
 
-app.include_router(webpush_router)
-app.include_router(notifications_router)
+    app = FastAPI(title="nudging-tool-api", version="0.1.0")
 
-for ar in admin_routers:
-    app.include_router(ar, prefix="")
+    app.add_middleware(AuthMiddleware)
 
-if STATIC_PATH.exists():
-    app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
-else:
-    logger.warning(f"STATIC_PATH {STATIC_PATH} not found")
+    app.include_router(webpush_router)
+    app.include_router(notifications_router)
+
+    for ar in admin_routers:
+        app.include_router(ar, prefix="/admin", tags=["admin"])
+
+    if STATIC_PATH.exists():
+        app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
+    else:
+        logger.warning(f"STATIC_PATH {STATIC_PATH} not found")
+
+    return app
+
+
+if __name__ == "__main__":
+    app = create_app()
