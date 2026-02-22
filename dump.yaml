@@ -1,0 +1,26 @@
+# Dumpster configuration
+dumps:
+  - name: sources
+    extensions:
+      - .py
+      - .md
+      - .json
+      - .toml
+      - .yaml
+      - .jinja
+    contents:
+      - src
+      - pyproject.toml
+  - name: all
+    extensions:
+      - .py
+      - .md
+      - .json
+      - .toml
+      - .yaml
+      - .jinja
+    contents:
+      - src
+      - pyproject.toml
+      - README.md
+      - .github
