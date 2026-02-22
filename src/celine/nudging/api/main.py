@@ -11,8 +11,8 @@ from celine.nudging.security.auth import AuthMiddleware
 from celine.nudging.api.routes.webpush import router as webpush_router
 from celine.nudging.api.routes.notifications import router as notifications_router
 
-from nudging.api.routes.admin_ingest import router as admin_ingest_router
-from nudging.api.routes.admin_notifications import (
+from celine.nudging.api.routes.admin_ingest import router as admin_ingest_router
+from celine.nudging.api.routes.admin_notifications import (
     router as admin_notifications_router,
 )
 

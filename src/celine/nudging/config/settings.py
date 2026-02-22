@@ -16,8 +16,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    oidc = OidcSettings(audience="svc-nudging")
-    policies = PoliciesSettings()
+    oidc: OidcSettings = OidcSettings(audience="svc-nudging")
+    policies: PoliciesSettings = PoliciesSettings()
 
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
