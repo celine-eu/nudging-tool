@@ -1,6 +1,10 @@
 version: "3"
 
 tasks:
+  setup:
+    cmds:
+      - uv sync
+
   debug:
     desc: "Run development server with debugger"
     cmds:
@@ -31,8 +35,3 @@ tasks:
     desc: "Reset DB schema"
     cmds:
       - uv run alembic downgrade base
-
-  setup:
-    cmds:
-      - uv sync
-      - .venv/bin/nudging-cli vapid gen
