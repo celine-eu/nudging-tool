@@ -27,6 +27,19 @@ is_admin if {
 }
 
 # ---------------------------------------------------------------------------
+# is_ingest: scope nudging.ingest  OR  is_admin (admins can also ingest)
+# ---------------------------------------------------------------------------
+default is_ingest := false
+
+is_ingest if {
+    "nudging.ingest" in input.subject.scopes
+}
+
+is_ingest if {
+    is_admin
+}
+
+# ---------------------------------------------------------------------------
 # filters: row-level predicate injected for user tokens
 # Service accounts (type == "service") get no filter → see everything.
 # ---------------------------------------------------------------------------

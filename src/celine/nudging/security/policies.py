@@ -150,3 +150,20 @@ def _extract_bool(result: Any, default: bool = False) -> bool:
     except Exception:
         pass
     return default
+
+
+def require_ingest(
+    user: JwtUser = Depends(get_current_user),
+    engine: CachedPolicyEngine = Depends(get_policy_engine),
+) -> JwtUser:
+    """Raise 403 unless the policy grants is_ingest for this subject."""
+    policy_input = _make_policy_input(user, action="ingest")
+    input_dict = engine._build_input_dict(policy_input)
+    raw = engine.evaluate(f"data.{_POLICY_PACKAGE}.is_ingest", input_dict)
+    if not _extract_bool(raw):
+        logger.warning("Ingest access denied for subject=%s", user.sub)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions: nudging.ingest scope required",
+        )
+    return user

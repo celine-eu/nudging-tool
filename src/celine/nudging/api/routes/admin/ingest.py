@@ -6,6 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from celine.nudging.security.policies import require_ingest
+from celine.sdk.auth import JwtUser
+
 from celine.nudging.api.schemas import (
     IngestAcceptedResponse,
     IngestErrorDetail,
@@ -46,7 +49,11 @@ logger = logging.getLogger(__name__)
     },
     status_code=200,
 )
-async def ingest_event(evt: DigitalTwinEvent, db: AsyncSession = Depends(get_db)):
+async def ingest_event(
+    evt: DigitalTwinEvent,
+    db: AsyncSession = Depends(get_db),
+    _user: JwtUser = Depends(require_ingest),
+):
     # --- base contract ---
     facts = evt.facts or {}
     if not facts:

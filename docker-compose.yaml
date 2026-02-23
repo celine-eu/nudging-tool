@@ -5,7 +5,6 @@ services:
       sh -c "
         .venv/bin/alembic upgrade head &&
         .venv/bin/python -m celine.nudging.db.seed_db
-        .venv/bin/nudging-cli vapid gen
       "
     environment:
       - SEED_DIR=/seed
@@ -18,10 +17,6 @@ services:
 
   api:
     build: .
-    environment:
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      VAPID_SUBJECT: ${VAPID_SUBJECT}
     ports:
       - "8016:8016"
     depends_on:
