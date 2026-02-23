@@ -1,29 +1,20 @@
 services:
   api-init:
     build: .
-    command: >
-      sh -c "
-        .venv/bin/alembic upgrade head &&
-        .venv/bin/python -m celine.nudging.db.seed_db
-      "
-    environment:
-      - SEED_DIR=/seed
-    volumes:
-      - ./src:/app/src
-      - ./seed:/seed
-    extra_hosts:
-      - "keycloak.celine.localhost:172.17.0.1"
-      - "api.celine.localhost:172.17.0.1"
+    command: .venv/bin/alembic upgrade head
 
   api:
     build: .
     ports:
       - "8016:8016"
+    environment:
+      - SEED_DIR=/seed
     depends_on:
       api-init:
         condition: service_completed_successfully
     volumes:
       - .env:/app/.env
+      - ./seed:/seed
     extra_hosts:
       - "keycloak.celine.localhost:172.17.0.1"
       - "api.celine.localhost:172.17.0.1"

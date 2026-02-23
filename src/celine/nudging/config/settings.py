@@ -16,7 +16,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    oidc: OidcSettings = OidcSettings(audience="svc-nudging")
+    oidc: OidcSettings = OidcSettings(
+        client_id="svc-nudging",
+        client_secret="svc-nudging",
+        audience="svc-nudging",
+    )
     policies: PoliciesSettings = PoliciesSettings()
 
     VAPID_PUBLIC_KEY: str = ""
@@ -29,7 +33,7 @@ class Settings(BaseSettings):
     )
 
     # General
-    SEED_DIR: Optional[str] = None
+    SEED_DIR: Optional[str] = "./seed"
     DEFAULT_LANG: str = "en"
     ORCHESTRATOR_URL: str = "http://api.celine.localhost/nudging"
 

@@ -40,7 +40,7 @@ _POLICY_PACKAGE = "celine.nudging.authz"
 def init_policy_engine() -> None:
     """Load policies from disk. Call once at application startup."""
     global _engine
-    policies_dir = settings.policies.policies_data_dir
+    policies_dir = settings.policies.policies_dir
     if policies_dir is None:
         raise ValueError("POLICIES_DIR not set")
 
@@ -53,7 +53,7 @@ def init_policy_engine() -> None:
         engine=base,
         cache=DecisionCache(maxsize=10_000, ttl_seconds=300),
     )
-    logger.info("Policy engine ready – packages: %s", _engine.get_packages())
+    logger.info("Policy engine ready - packages: %s", _engine.get_packages())
 
 
 def get_policy_engine() -> CachedPolicyEngine:

@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import logging
 import os
 from pathlib import Path
@@ -12,6 +13,17 @@ from celine.nudging.api.routes.webpush import router as webpush_router
 from celine.nudging.api.routes.notifications import router as notifications_router
 
 from celine.nudging.api.routes.admin import admin_routers
+from celine.nudging.db.auto_seed import auto_seed
+from celine.nudging.security.policies import init_policy_engine
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: initialise policies and optionally seed the DB."""
+    init_policy_engine()
+    await auto_seed()
+    yield
+    # (teardown goes here if needed)
 
 
 def create_app():
@@ -23,7 +35,7 @@ def create_app():
     default_static_path = Path(__file__).resolve().parent / "tests" / "static"
     STATIC_PATH = Path(os.getenv("STATIC_PATH", str(default_static_path))).resolve()
 
-    app = FastAPI(title="nudging-tool-api", version="0.1.0")
+    app = FastAPI(title="nudging-tool-api", version="0.1.0", lifespan=lifespan)
 
     app.add_middleware(AuthMiddleware)
 
