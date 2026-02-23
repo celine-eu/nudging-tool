@@ -21,8 +21,6 @@ ENV PATH=".venv/bin:/root/.local/bin:${PATH}"
 # Copy dependency manifests first for better caching
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
-
-# Install deps (no dev deps declared; adjust if you add optional groups)
 RUN uv sync --no-editable
 
 # Copy application code

@@ -10,7 +10,6 @@ services:
     environment:
       - SEED_DIR=/seed
     volumes:
-      - ./.env:/app/.env
       - ./src:/app/src
       - ./seed:/seed
     extra_hosts:
@@ -28,10 +27,8 @@ services:
     depends_on:
       api-init:
         condition: service_completed_successfully
-    # volumes:
-    #   - .:/app
+    volumes:
+      - .env:/app/.env
     extra_hosts:
       - "keycloak.celine.localhost:172.17.0.1"
       - "api.celine.localhost:172.17.0.1"
-# volumes:
-#   pgdata:

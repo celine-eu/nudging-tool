@@ -31,3 +31,8 @@ tasks:
     desc: "Reset DB schema"
     cmds:
       - uv run alembic downgrade base
+
+  setup:
+    cmds:
+      - uv sync
+      - .venv/bin/nudging-cli vapid gen
