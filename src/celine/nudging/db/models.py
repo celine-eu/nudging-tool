@@ -25,7 +25,6 @@ class Rule(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     templates: Mapped[list["Template"]] = relationship(back_populates="rule", cascade="all, delete-orphan")
-    #TODO: dedup rule
 
 class Template(Base):
     __tablename__ = "templates"

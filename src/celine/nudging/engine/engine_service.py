@@ -412,7 +412,6 @@ def _should_skip_dedup(rule: Rule) -> bool:
     return str(rule.definition.get("dedup_window", "")).lower() == "always"
 
 
-# TODO valutare bene per la duplicazione
 def _dedup_scope(rule: Rule, facts: dict) -> str:
     window = str(rule.definition.get("dedup_window") or "monthly").lower().strip()
 
