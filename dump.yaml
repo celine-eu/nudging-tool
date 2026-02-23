@@ -1,0 +1,34 @@
+extensions:
+  - .py
+  - .md
+  - .json
+  - .toml
+  - .yaml
+  - .jinja
+  - .rego
+
+dumps:
+  - name: sources
+    extensions:
+      - .py
+      - .md
+      - .json
+      - .toml
+      - .yaml
+      - .jinja
+      - .rego
+    contents:
+      - src
+      - policies
+      - pyproject.toml
+
+  - name: all
+    contents:
+      - src
+      - tests
+      - policies
+      - alembic
+      - alembic.ini
+      - pyproject.toml
+      - README.md
+      - .github

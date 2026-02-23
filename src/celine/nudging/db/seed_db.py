@@ -1,20 +1,27 @@
 import asyncio
+import logging
 from pathlib import Path
 
 import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from celine.nudging.config.settings import settings  # <-- for DEFAULT_LANG
+from celine.nudging.config.settings import settings
 from celine.nudging.db.models import Rule, Template, UserPreference
 from celine.nudging.db.session import AsyncSessionLocal
 
-SEED_DIR = Path(__file__).parent / "seed"
+logger = logging.getLogger(__name__)
+
+SEED_DIR = Path(settings.SEED_DIR or (Path.cwd() / "seed"))
+
+if not SEED_DIR.exists():
+    logger.error(f"Seed dir {SEED_DIR} does not exists. Provide with SEED_DIR env.")
 
 
 def load_yaml(file_name: str) -> dict:
     p = SEED_DIR / file_name
     if not p.exists():
+        logger.warning(f"Seed yaml {str(p)} not found.")
         return {}
     return yaml.safe_load(p.read_text(encoding="utf-8")) or {}
 

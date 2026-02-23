@@ -1,6 +1,7 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from celine.sdk.settings.models import OidcSettings, PoliciesSettings
 
 
 class Settings(BaseSettings):
@@ -15,12 +16,20 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    oidc: OidcSettings = OidcSettings(audience="svc-nudging")
+    policies: PoliciesSettings = PoliciesSettings()
+
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_SUBJECT: str = "mailto:test@celine.localhost"
+
     # Database
     DATABASE_URL: str = (
         "postgresql+asyncpg://postgres:securepassword123@172.17.0.1:15432/nudging"
     )
 
     # General
+    SEED_DIR: Optional[str] = None
     DEFAULT_LANG: str = "en"
     ORCHESTRATOR_URL: str = "http://api.celine.localhost/nudging"
 

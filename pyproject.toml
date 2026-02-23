@@ -12,14 +12,16 @@ dependencies = [
   "celine-sdk>=1.1.0",
   "fastapi>=0.129.0",
   "httpx>=0.28.1",
-  "hypercorn>=0.18.0",
   "jinja2>=3.1.6",
+  "psycopg2-binary>=2.9.11",
   "pydantic>=2.12.5",
   "pydantic-settings>=2.13.0",
   "python-dotenv>=1.2.1",
   "pywebpush>=2.3.0",
   "pyyaml>=6.0.3",
   "sqlalchemy>=2.0.46",
+  "typer>=0.23.1",
+  "uvicorn[standard]>=0.41.0",
 ]
 
 [build-system]
@@ -53,7 +55,6 @@ dev = [
   "pytest-asyncio>=0.23.0",
   "httpx>=0.28.1",
   "debugpy>=1.8.19",
-  "dumpster-cli>=1.3.2",
 ]
 
 [tool.semantic_release]
@@ -80,3 +81,6 @@ patch_tags = ["fix", "perf", "up"]
 parse_squash_commits = true
 ignore_merge_commits = true
 
+
+[project.scripts]
+nudging-cli = "celine.nudging.cli.main:create_app"

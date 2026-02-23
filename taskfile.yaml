@@ -1,10 +1,14 @@
 version: "3"
 
 tasks:
+  setup:
+    cmds:
+      - uv sync
+
   debug:
     desc: "Run development server with debugger"
     cmds:
-      - DEBUG_ATTACH=nowait DEBUG_PORT=48016 uv run hypercorn celine.nudging.api.main:app --bind 0.0.0.0:8016
+      - LOG_LEVEL=DEBUG DEBUG_ATTACH=nowait DEBUG_PORT=48016 .venv/bin/uvicorn celine.nudging.main:create_app --reload --host 0.0.0.0 --port 8016
 
   test:
     desc: Run tests
@@ -17,19 +21,17 @@ tasks:
       - git push
       - git push --tags
 
-  # alembic:migrate:
-  #   desc: "Run migrations"
-  #   cmds:
-  #     - uv run alembic upgrade head
+  alembic:migrate:
+    desc: "Run migrations"
+    cmds:
+      - uv run alembic upgrade head
 
-  # alembic:sync-model:
-  #   desc: "Create new revision"
-  #   cmds:
-  #     - uv run alembic revision --autogenerate -m \"$MSG\"
-  #   vars:
-  #     MSG: "update model"
+  alembic:sync-model:
+    desc: "Generate a new alembic migration. Usage: task alembic:sync-model -- 'short description'"
+    cmds:
+      - uv run alembic revision --autogenerate -m "{{.CLI_ARGS}}"
 
-  # alembic:reset:
-  #   desc: "Reset DB schema"
-  #   cmds:
-  #     - uv run alembic downgrade base
+  alembic:reset:
+    desc: "Reset DB schema"
+    cmds:
+      - uv run alembic downgrade base

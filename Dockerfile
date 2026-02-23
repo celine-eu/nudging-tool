@@ -21,15 +21,12 @@ ENV PATH=".venv/bin:/root/.local/bin:${PATH}"
 # Copy dependency manifests first for better caching
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
-COPY src ./src
-
-# Install deps (no dev deps declared; adjust if you add optional groups)
 RUN uv sync --no-editable
 
 # Copy application code
-# COPY config ./config
-# COPY alembic ./alembic
-# COPY alembic.ini ./
+COPY policies ./policies
+COPY alembic ./alembic
+COPY alembic.ini ./
 
 EXPOSE 8016
-CMD [".venv/bin/hypercorn", "celine.nudging.api.main:app", "--bind", "0.0.0.0:8016"]
+CMD [".venv/bin/uvicorn", "celine.nudging.main:create_app", "--host", "0.0.0.0", "--port", "8016"]

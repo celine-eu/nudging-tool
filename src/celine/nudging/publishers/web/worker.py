@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from pywebpush import WebPushException, webpush
@@ -13,20 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from celine.nudging.db.models import DeliveryLog, WebPushSubscription
 from celine.nudging.orchestrator.models import DeliveryJob
 from celine.nudging.publishers.base import Publisher, PublishResult
-
-VAPID_SUBJECT = "mailto:you@example.com"
-
-
-def _get_vapid_private_key() -> str | None:
-    key = os.getenv("VAPID_PRIVATE_KEY")
-    if not key:
-        return None
-
-    # se la PEM è stata messa con \n letterali
-    if "\\n" in key:
-        key = key.replace("\\n", "\n")
-
-    return key
+from celine.nudging.config.settings import settings
+from celine.nudging.utils import get_vapid
 
 
 class WebPublisher(Publisher):
@@ -47,7 +35,7 @@ def _endpoint_suffix(endpoint: str) -> str:
 
 
 async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Load enabled subscriptions
     filters = [
@@ -74,9 +62,9 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
         },
     }
 
-    vapid_private_key = _get_vapid_private_key()
+    vapid = get_vapid()
 
-    if not vapid_private_key:
+    if not vapid.private_key:
         last_error = "Missing VAPID_PRIVATE_KEY"
     elif not subscriptions:
         last_error = "no_subscriptions"
@@ -92,8 +80,8 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
                         },
                     },
                     data=json.dumps(payload),
-                    vapid_private_key=vapid_private_key,
-                    vapid_claims={"sub": VAPID_SUBJECT},
+                    vapid_private_key=vapid.private_key,
+                    vapid_claims={"sub": vapid.subject},
                 )
                 sent += 1
 

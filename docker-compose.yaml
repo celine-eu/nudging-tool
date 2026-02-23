@@ -1,46 +1,17 @@
-version: "3.9"
-
 services:
-  # db:
-  #   image: postgres:16
-  #   environment:
-  #     POSTGRES_DB: nudging
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #   ports:
-  #     - "5433:5432"
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres -d nudging"]
-  #     interval: 5s
-  #     timeout: 3s
-  #     retries: 20
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-
-  # initdb:
-  #   build: .
-  #   environment:
-  #     DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/nudging
-  #     DEFAULT_LANG: it
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   command: ["python", "-m", "db.init_db"]
-  #   restart: "no"
-
   api-init:
     build: .
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:securepassword123@172.17.0.1:15432/nudging
-      DEFAULT_LANG: it
-      MAX_PER_DAY_DEFAULT: 3
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      VAPID_SUBJECT: ${VAPID_SUBJECT}
     command: >
-      uv run python -m celine.nudging.db.init_db
+      sh -c "
+        .venv/bin/alembic upgrade head &&
+        .venv/bin/python -m celine.nudging.db.seed_db
+        .venv/bin/nudging-cli vapid gen
+      "
+    environment:
+      - SEED_DIR=/seed
     volumes:
       - ./src:/app/src
+      - ./seed:/seed
     extra_hosts:
       - "keycloak.celine.localhost:172.17.0.1"
       - "api.celine.localhost:172.17.0.1"
@@ -48,9 +19,6 @@ services:
   api:
     build: .
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:securepassword123@172.17.0.1:15432/nudging
-      DEFAULT_LANG: it
-      MAX_PER_DAY_DEFAULT: 3
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       VAPID_SUBJECT: ${VAPID_SUBJECT}
@@ -59,10 +27,8 @@ services:
     depends_on:
       api-init:
         condition: service_completed_successfully
-    # volumes:
-    #   - .:/app
+    volumes:
+      - .env:/app/.env
     extra_hosts:
       - "keycloak.celine.localhost:172.17.0.1"
       - "api.celine.localhost:172.17.0.1"
-# volumes:
-#   pgdata:
