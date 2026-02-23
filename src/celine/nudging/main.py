@@ -20,7 +20,7 @@ def create_app():
 
     logger = logging.getLogger(__name__)
 
-    default_static_path = Path(__file__).resolve().parents[1] / "tests" / "static"
+    default_static_path = Path(__file__).resolve().parent / "tests" / "static"
     STATIC_PATH = Path(os.getenv("STATIC_PATH", str(default_static_path))).resolve()
 
     app = FastAPI(title="nudging-tool-api", version="0.1.0")
