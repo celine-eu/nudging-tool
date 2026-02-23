@@ -43,12 +43,16 @@ async def subscribe(body: dict, request: Request, db: AsyncSession = Depends(get
     p256dh = sub["keys"]["p256dh"]
     auth = sub["keys"]["auth"]
 
-    q = await db.execute(
-        select(WebPushSubscription).where(
-            WebPushSubscription.user_id == user_id,
-            WebPushSubscription.endpoint == endpoint,
-        )
-    )
+    filters = [
+        WebPushSubscription.user_id == user_id,
+        WebPushSubscription.endpoint == endpoint,
+    ]
+    if community_id is None:
+        filters.append(WebPushSubscription.community_id.is_(None))
+    else:
+        filters.append(WebPushSubscription.community_id == community_id)
+
+    q = await db.execute(select(WebPushSubscription).where(*filters))
     row = q.scalar_one_or_none()
 
     if row is None:
@@ -77,15 +81,18 @@ async def unsubscribe(body: dict, db: AsyncSession = Depends(get_db)):
     user_id = body["user_id"]
     endpoint = body["endpoint"]
 
-    q = await db.execute(
-        select(WebPushSubscription).where(
-            WebPushSubscription.user_id == user_id,
-            WebPushSubscription.endpoint == endpoint,
-        )
-    )
-    row = q.scalar_one_or_none()
-    if row:
+    filters = [
+        WebPushSubscription.user_id == user_id,
+        WebPushSubscription.endpoint == endpoint,
+    ]
+    if "community_id" in body:
+        filters.append(WebPushSubscription.community_id == body.get("community_id"))
+
+    q = await db.execute(select(WebPushSubscription).where(*filters))
+    rows = q.scalars().all()
+    for row in rows:
         row.enabled = False
+    if rows:
         await db.commit()
 
     return {"status": "ok"}
@@ -94,17 +101,19 @@ async def unsubscribe(body: dict, db: AsyncSession = Depends(get_db)):
 @router.post("/send-test", response_model=None)
 async def send_test(body: dict, db: AsyncSession = Depends(get_db)):
     user_id = body["user_id"]
+    community_id = body.get("community_id")
     title = body.get("title", "Test")
     msg = body.get("body", "Hello!")
     url = body.get("url", "/")
 
     # carica subscription
-    q = await db.execute(
-        select(WebPushSubscription).where(
-            WebPushSubscription.user_id == user_id,
-            WebPushSubscription.enabled.is_(True),
-        )
-    )
+    filters = [
+        WebPushSubscription.user_id == user_id,
+        WebPushSubscription.enabled.is_(True),
+    ]
+    if community_id is not None:
+        filters.append(WebPushSubscription.community_id == community_id)
+    q = await db.execute(select(WebPushSubscription).where(*filters))
     subs = q.scalars().all()
     if not subs:
         return {"status": "no_subscriptions"}

@@ -10,6 +10,7 @@ class Channel(str, Enum):
 
 class DeliveryJob(BaseModel):
     user_id: str
+    community_id: str | None = None
     job_id: str
     rule_id: str
     nudge_id: str

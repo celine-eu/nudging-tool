@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Web Push Test</title>
+    <style>
+      body { font-family: system-ui, sans-serif; padding: 24px; }
+      button { margin-right: 8px; }
+      pre { background: #111; color: #0f0; padding: 12px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Web Push Test</h1>
+    <p>
+      User:
+      <select id="userSelect">
+        <option value="user-it">user-it</option>
+        <option value="user-en">user-en</option>
+        <option value="user-es">user-es</option>
+        <option value="user-ca">user-ca</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <input id="userCustom" type="text" placeholder="user-id" style="display:none; margin-left:8px;" />
+    </p>
+
+    <p>
+      Community:
+      <select id="commSelect">
+        <option value="comm-1">comm-1</option>
+        <option value="comm-2">comm-2</option>
+        <option value="comm-3">comm-3</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <input id="commCustom" type="text" placeholder="community-id" style="display:none; margin-left:8px;" />
+    </p>
+
+    <button id="btnEnable">Enable browser notifications</button>
+    <button id="btnDisable">Disable</button>
+    <button id="btnSend">Send test push</button>
+
+    <h3>Log</h3>
+    <pre id="log"></pre>
+
+    <script>
+      const logEl = document.getElementById("log");
+      const userSelect = document.getElementById("userSelect");
+      const userCustom = document.getElementById("userCustom");
+      const commSelect = document.getElementById("commSelect");
+      const commCustom = document.getElementById("commCustom");
+
+      function resolveValue(selectEl, customEl) {
+        if (selectEl.value === "custom") {
+          return (customEl.value || "").trim();
+        }
+        return selectEl.value;
+      }
+
+      function currentUserId() {
+        return resolveValue(userSelect, userCustom);
+      }
+
+      function currentCommunityId() {
+        return resolveValue(commSelect, commCustom);
+      }
+
+      function log(...args) {
+        logEl.textContent += args.map(a => (typeof a === "string" ? a : JSON.stringify(a, null, 2))).join(" ") + "\n";
+      }
+
+      function logCtx(message) {
+        log(`[user=${currentUserId()} community=${currentCommunityId()}] ${message}`);
+      }
+
+      // Base64URL -> Uint8Array
+      function urlBase64ToUint8Array(base64String) {
+        const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+        const raw = atob(base64);
+        const out = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+      }
+
+      async function getVapidPublicKey() {
+        const r = await fetch("/webpush/vapid-public-key");
+        const j = await r.json();
+        return j.public_key;
+      }
+
+      async function registerSW() {
+        const reg = await navigator.serviceWorker.register("/static/sw.js");
+        await navigator.serviceWorker.ready;
+        return reg;
+      }
+
+      async function enable() {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+          throw new Error("Push not supported by this browser");
+        }
+
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") throw new Error("Permission not granted");
+
+        const reg = await registerSW();
+        await reg.update();
+
+        const vapidPublicKey = await getVapidPublicKey();
+
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+          });
+        }
+
+        const res = await fetch("/webpush/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: currentUserId(),               // per test, se non hai auth
+            community_id: currentCommunityId(),
+            subscription: sub,
+          }),
+        });
+
+        const out = await res.json();
+        logCtx("Subscribed");
+        log(out);
+      }
+
+      async function disable() {
+        const reg = await registerSW();
+        const sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          log("No subscription to disable");
+          return;
+        }
+
+        await fetch("/webpush/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: currentUserId(),
+            community_id: currentCommunityId(),
+            endpoint: sub.endpoint,
+          }),
+        });
+
+        logCtx("Disabled for selected user/community");
+      }
+
+      async function sendTest() {
+        const res = await fetch("/webpush/send-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: currentUserId(),
+            community_id: currentCommunityId(),
+            title: "Test push",
+            body: "Ciao! Questa è una notifica di test.",
+            url: "/",
+          }),
+        });
+        const out = await res.json();
+        logCtx("Send-test response");
+        log(out);
+      }
+
+      document.getElementById("btnEnable").onclick = () => enable().catch(e => log("ERROR:", e.message));
+      document.getElementById("btnDisable").onclick = () => disable().catch(e => log("ERROR:", e.message));
+      document.getElementById("btnSend").onclick = () => sendTest().catch(e => log("ERROR:", e.message));
+
+      userSelect.onchange = () => {
+        userCustom.style.display = userSelect.value === "custom" ? "inline-block" : "none";
+      };
+      commSelect.onchange = () => {
+        commCustom.style.display = commSelect.value === "custom" ? "inline-block" : "none";
+      };
+    </script>
+  </body>
+</html>

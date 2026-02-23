@@ -18,28 +18,34 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
     res = await db.execute(select(NudgeLog).where(NudgeLog.id == nudge_id))
     n = res.scalar_one()
 
-    pref = await get_user_pref(db, n.user_id)
+    pref = await get_user_pref(db, n.user_id, n.community_id)
     max_per_day = pref.max_per_day if pref else 3
 
     # count sent today (simple version: delivery_log status=sent)
     today = date.today()
+    if n.community_id:
+        dest_prefix = f"web:{n.user_id}:{n.community_id}"
+    else:
+        dest_prefix = f"web:{n.user_id}"
     cnt_res = await db.execute(
         select(func.count(DeliveryLog.id)).where(
             DeliveryLog.status == "sent",
-            DeliveryLog.destination.like(f"web:{n.user_id}%"),
+            DeliveryLog.destination.like(f"{dest_prefix}%"),
             func.date(DeliveryLog.sent_at) == today,
         )
     )
     sent_today = int(cnt_res.scalar() or 0)
 
     # build job (sempre, così lo puoi loggare anche se suppressed)
+    destination = dest_prefix
     job = DeliveryJob(
         user_id=n.user_id,
+        community_id=n.community_id,
         job_id=uuid4().hex,
         rule_id=n.rule_id,
         nudge_id=n.id,
         channel=Channel.web,
-        destination=f"web:{n.user_id}",
+        destination=destination,
         title=n.payload.get("title", ""),
         body=n.payload.get("body", ""),
         dedup_key=n.dedup_key,

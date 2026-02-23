@@ -73,13 +73,17 @@ async def upsert_template(db: AsyncSession, t: dict):
 
 async def upsert_preference(db: AsyncSession, p: dict):
     user_id = p["user_id"]
+    community_id = p.get("community_id")
 
     existing = await db.execute(
-        select(UserPreference).where(UserPreference.user_id == user_id)
+        select(UserPreference).where(
+            UserPreference.user_id == user_id,
+            UserPreference.community_id == community_id,
+        )
     )
     obj = existing.scalar_one_or_none()
     if obj is None:
-        obj = UserPreference(user_id=user_id)
+        obj = UserPreference(user_id=user_id, community_id=community_id)
         db.add(obj)
 
     # NEW: language (preferred)

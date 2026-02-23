@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
+from uuid import uuid4
 
 from sqlalchemy import (String, DateTime, Boolean, Integer, ForeignKey, Text, JSON, UniqueConstraint)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -40,7 +41,9 @@ class Template(Base):
 
 class UserPreference(Base):
     __tablename__ = "user_preferences"
-    user_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: uuid4().hex)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    community_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     lang: Mapped[str] = mapped_column(String(64), default="en", nullable=False)
 
     channel_web: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -57,11 +60,16 @@ class UserPreference(Base):
 
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint("user_id", "community_id", name="uq_user_pref_user_community"),
+    )
+
 class NudgeLog(Base):
     __tablename__ = "nudges_log"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     rule_id: Mapped[str] = mapped_column(String(64), nullable=False)
     user_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    community_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     dedup_key: Mapped[str] = mapped_column(String(255), nullable=False)
 
     status: Mapped[str] = mapped_column(String(30), default="created", nullable=False)
@@ -87,7 +95,14 @@ class DeliveryLog(Base):
 
 class WebPushSubscription(Base):
     __tablename__ = "web_push_subscriptions"
-    __table_args__ = (UniqueConstraint("user_id", "endpoint", name="uq_webpush_user_endpoint"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "endpoint",
+            "community_id",
+            name="uq_webpush_user_endpoint_community",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String, primary_key=True)  # uuid
     user_id: Mapped[str] = mapped_column(String, index=True, nullable=False)

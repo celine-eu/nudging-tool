@@ -50,12 +50,14 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
     now = datetime.utcnow()
 
     # Load enabled subscriptions
-    result = await db.execute(
-        select(WebPushSubscription).where(
-            WebPushSubscription.user_id == job.user_id,
-            WebPushSubscription.enabled.is_(True),
-        )
-    )
+    filters = [
+        WebPushSubscription.user_id == job.user_id,
+        WebPushSubscription.enabled.is_(True),
+    ]
+    if job.community_id is not None:
+        filters.append(WebPushSubscription.community_id == job.community_id)
+
+    result = await db.execute(select(WebPushSubscription).where(*filters))
     subscriptions = list(result.scalars().all())
 
     sent = 0

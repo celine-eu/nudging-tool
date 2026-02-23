@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -207,6 +207,7 @@ async def _resolve_lang(
     db: AsyncSession,
     *,
     user_id: str,
+    community_id: str | None,
     facts: dict,
 ) -> str:
     # 1) override esplicito dal Digital Twin
@@ -216,9 +217,17 @@ async def _resolve_lang(
 
     # 2) preferenza utente
     res = await db.execute(
-        select(UserPreference.lang).where(UserPreference.user_id == user_id)
+        select(UserPreference.lang)
+        .where(
+            UserPreference.user_id == user_id,
+            or_(
+                UserPreference.community_id == community_id,
+                UserPreference.community_id.is_(None),
+            ),
+        )
+        .order_by(UserPreference.community_id.is_(None).asc())
     )
-    pref_lang = res.scalar_one_or_none()
+    pref_lang = res.scalars().first()
     if pref_lang:
         return pref_lang
 
@@ -226,13 +235,15 @@ async def _resolve_lang(
     return settings.DEFAULT_LANG
 
 
-def compute_dedup_key(rule_id: str, user_id: str, scope: str) -> str:
-    return f"{rule_id}:{user_id}:{scope}"
+def compute_dedup_key(rule_id: str, user_id: str, community_id: str | None, scope: str) -> str:
+    cid = community_id or ""
+    return f"{rule_id}:{user_id}:{cid}:{scope}"
 
 
-def _attempt_dedup_key(rule_id: str, user_id: str, scope: str) -> str:
+def _attempt_dedup_key(rule_id: str, user_id: str, community_id: str | None, scope: str) -> str:
     # unique key so it won't collide with uq_nudges_dedup_key
-    return f"attempt:{rule_id}:{user_id}:{scope}:{uuid4().hex}"
+    cid = community_id or ""
+    return f"attempt:{rule_id}:{user_id}:{cid}:{scope}:{uuid4().hex}"
 
 
 async def _log_status(
@@ -241,6 +252,7 @@ async def _log_status(
     status: EngineResultStatus,
     rule_id: str,
     user_id: str,
+    community_id: str | None,
     scope: str,
     scenario: str,
     facts_version: str,
@@ -256,10 +268,12 @@ async def _log_status(
     - For others: use attempt dedup key (unique) so UNIQUE constraint isn't hit
     """
     if status == EngineResultStatus.CREATED:
-        dedup_key = created_dedup_key or _attempt_dedup_key(rule_id, user_id, scope)
+        dedup_key = created_dedup_key or _attempt_dedup_key(
+            rule_id, user_id, community_id, scope
+        )
         log_id = nudge_id or uuid4().hex
     else:
-        dedup_key = _attempt_dedup_key(rule_id, user_id, scope)
+        dedup_key = _attempt_dedup_key(rule_id, user_id, community_id, scope)
         log_id = uuid4().hex
 
     payload = {
@@ -274,6 +288,7 @@ async def _log_status(
             id=log_id,
             rule_id=rule_id,
             user_id=user_id,
+            community_id=community_id,
             dedup_key=dedup_key,
             status=status.value,  # <-- IMPORTANT: EngineResultStatus
             payload=payload,
@@ -438,7 +453,12 @@ async def run_engine_batch(
 ) -> list[EngineResult]:
 
     facts_in_raw = _facts_from_event(evt)
-    lang = lang or await _resolve_lang(db, user_id=str(evt.user_id), facts=facts_in_raw)
+    lang = lang or await _resolve_lang(
+        db,
+        user_id=str(evt.user_id),
+        community_id=str(evt.community_id) if evt.community_id is not None else None,
+        facts=facts_in_raw,
+    )
 
     ok, errors = _validate_facts_contract(facts_in_raw)
     if not ok:
@@ -449,6 +469,7 @@ async def run_engine_batch(
             status=EngineResultStatus.MISSING_FACTS,
             rule_id="__no_rule__",
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope="__no_scope__",
             scenario=scenario,
             facts_version=str(facts_in_raw.get("facts_version") or ""),
@@ -473,6 +494,7 @@ async def run_engine_batch(
             status=EngineResultStatus.MISSING_FACTS,
             rule_id="__no_rule__",
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope="__no_scope__",
             scenario=scenario,
             facts_version=str(facts_in_raw.get("facts_version") or ""),
@@ -503,6 +525,7 @@ async def run_engine_batch(
             status=EngineResultStatus.UNKNOWN_SCENARIO,
             rule_id="__no_rule__",
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope=ts.scope,
             scenario=scenario,
             facts_version=str(facts_in_raw.get("facts_version") or ""),
@@ -526,6 +549,7 @@ async def run_engine_batch(
             status=EngineResultStatus.UNKNOWN_SCENARIO,
             rule_id="__no_rule__",
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope=ts.scope,
             scenario=scenario,
             facts_version=str(facts_in_raw.get("facts_version") or ""),
@@ -588,6 +612,7 @@ async def _run_single_rule(
             status=EngineResultStatus.UNKNOWN_SCENARIO,
             rule_id=str(rule_id),
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope=str(
                 facts_in.get("time")
                 or facts_in.get("date")
@@ -614,6 +639,7 @@ async def _run_single_rule(
             status=EngineResultStatus.MISSING_FACTS,
             rule_id=str(rule.id),
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope=scope,
             scenario=scenario,
             facts_version=facts_version_str,
@@ -635,6 +661,7 @@ async def _run_single_rule(
             status=EngineResultStatus.NOT_TRIGGERED,
             rule_id=str(rule.id),
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope=scope,
             scenario=scenario,
             facts_version=facts_version_str,
@@ -673,7 +700,7 @@ async def _run_single_rule(
     )
 
     # write log with dedup
-    dk = compute_dedup_key(str(rule.id), evt.user_id, scope)
+    dk = compute_dedup_key(str(rule.id), evt.user_id, evt.community_id, scope)
 
     rule_id_str = str(rule.id)
     scenario_str = scenario
@@ -686,6 +713,7 @@ async def _run_single_rule(
                 id=nudge.nudge_id,
                 rule_id=rule_id_str,
                 user_id=nudge.user_id,
+                community_id=str(nudge.community_id) if nudge.community_id is not None else None,
                 dedup_key=dk_str,
                 status=EngineResultStatus.CREATED.value,
                 payload={
@@ -706,6 +734,7 @@ async def _run_single_rule(
             status=EngineResultStatus.SUPPRESSED_DEDUP,
             rule_id=rule_id_str,
             user_id=str(evt.user_id),
+            community_id=str(evt.community_id) if evt.community_id is not None else None,
             scope=scope,
             scenario=scenario_str,
             facts_version=facts_version_str,
