@@ -2,13 +2,13 @@ import asyncio
 import logging
 from pathlib import Path
 
-import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from celine.nudging.config.settings import settings
 from celine.nudging.db.models import Rule, Template, UserPreference
 from celine.nudging.db.session import AsyncSessionLocal
+from celine.nudging.seed import load_seed_dir, validate_seed
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +16,6 @@ SEED_DIR = Path(settings.SEED_DIR or (Path.cwd() / "seed"))
 
 if not SEED_DIR.exists():
     logger.error(f"Seed dir {SEED_DIR} does not exists. Provide with SEED_DIR env.")
-
-
-def load_yaml(file_name: str) -> dict:
-    p = SEED_DIR / file_name
-    if not p.exists():
-        logger.warning(f"Seed yaml {str(p)} not found.")
-        return {}
-    return yaml.safe_load(p.read_text(encoding="utf-8")) or {}
 
 
 def _tpl_id(rule_id: str, lang: str) -> str:
@@ -47,6 +39,7 @@ async def upsert_rule(db: AsyncSession, r: dict):
     obj.severity = r["severity"]
     obj.version = int(r.get("version", 1))
     obj.definition = r.get("definition", {})
+    obj.scenarios = (r.get("definition") or {}).get("scenarios") or r.get("scenarios") or []
 
 
 async def upsert_template(db: AsyncSession, t: dict):
@@ -116,9 +109,16 @@ async def upsert_preference(db: AsyncSession, p: dict):
 
 
 async def main():
-    rules_y = load_yaml("rules.yaml").get("rules", [])
-    tmpl_y = load_yaml("templates.yaml").get("templates", [])
-    pref_y = load_yaml("preferences.yaml").get("preferences", [])
+    seed = load_seed_dir(SEED_DIR)
+    seed, errors = validate_seed(seed)
+    if errors:
+        for e in errors:
+            logger.error("Seed error: %s", e)
+        raise SystemExit(1)
+
+    rules_y = seed.rules
+    tmpl_y = seed.templates
+    pref_y = seed.preferences
 
     async with AsyncSessionLocal() as db:
         for r in rules_y:

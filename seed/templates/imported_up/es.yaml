@@ -1,0 +1,7 @@
+title_jinja: "\xA1Alerta!"
+body_jinja: "\xA1Alerta!\nHas aumentado m\xE1s de un {{ delta_pct | round(2) }}% la\
+  \ importaci\xF3n de energ\xEDa de la red, y esto puede tener un impacto en tu factura.\n\
+  Ajustar los consumos a las horas de producci\xF3n fotovoltaica puede ayudarte a\
+  \ reducir la importaci\xF3n de energ\xEDa de la red.\nEntra en la aplicaci\xF3n\
+  \ y consulta tu perfil para saber c\xF3mo hacerlo y conocer el ahorro potencial\
+  \ que puedes conseguir."

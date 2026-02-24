@@ -1,0 +1,6 @@
+title_jinja: Alert!
+body_jinja: "Alert!\nHourly energy price (\u20AC/kWh) in the indexed rate has increased\
+  \ significantly.\nConsumption during this time period may lead to an increase in\
+  \ the electricity bill.\nConsuming energy during photovoltaic production hours can\
+  \ help you reduce electricity imports.\nEnter the application and check your consumption\
+  \ profile to find out the potential savings you can achieve."

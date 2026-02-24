@@ -1,0 +1,19 @@
+rules:
+- id: inverter_error_critical_daily_v1
+  name: Inverter error (critical)
+  enabled: true
+  family: system
+  type: alert
+  severity: alert
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: daily
+    required_facts:
+    - system_status_error_last_day_total
+    conditions:
+    - fact_key: system_status_error_last_day_total
+      op: '>='
+      value: 1
+    scenarios:
+    - inverter_error_critical_daily_v1

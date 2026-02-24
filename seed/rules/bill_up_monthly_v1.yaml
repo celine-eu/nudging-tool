@@ -1,0 +1,19 @@
+rules:
+- id: bill_up_monthly_v1
+  name: Bill up 15% MoM
+  enabled: true
+  family: billing
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: monthly
+    required_facts:
+    - cost_last_month_total_ratio
+    conditions:
+    - fact_key: cost_last_month_total_ratio
+      op: '>'
+      value: 1.15
+    scenarios:
+    - bill_up_monthly_v1

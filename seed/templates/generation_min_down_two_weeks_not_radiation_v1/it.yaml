@@ -1,0 +1,5 @@
+title_jinja: Produzione bassa (2 sett.)
+body_jinja: "Avviso!\nLa produzione minima giornaliera degli ultimi 15 giorni \xE8\
+  \ diminuita di circa {{ ((1 - energy_generation_last_two_weeks_min_ratio) * 100)\
+  \ | round(0) }}% mentre la radiazione \xE8 rimasta quasi stabile.\nPotrebbe trattarsi\
+  \ di un problema tecnico. Controlla l\u2019app o contatta l\u2019assistenza se necessario."

@@ -1,0 +1,6 @@
+title_jinja: "Opportunit\xE0!"
+body_jinja: "Opportunit\xE0!\n{{ day_label }}, tra le {{ window_start }} e le {{ window_end\
+  \ }}, \xE8 previsto tempo soleggiato e sereno, condizioni ideali per la produzione\
+  \ fotovoltaica.\nIl consumo di energia durante queste ore favorisce la condivisione\
+  \ dell\u2019energia all\u2019interno della CER e contribuisce a massimizzare gli\
+  \ incentivi."

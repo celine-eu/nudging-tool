@@ -1,0 +1,19 @@
+rules:
+- id: ticket_opened_info_v1
+  name: Ticket opened
+  enabled: true
+  family: system
+  type: informative
+  severity: info
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: daily
+    required_facts:
+    - event_name
+    conditions:
+    - fact_key: event_name
+      op: ==
+      value: ticket_opened
+    scenarios:
+    - ticket_opened_info_v1

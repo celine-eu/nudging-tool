@@ -1,0 +1,19 @@
+rules:
+- id: selfcons_down_weekly_v1
+  name: Self-cons down 15% WoW
+  enabled: true
+  family: energy
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: weekly
+    required_facts:
+    - energy_selfcons_last_week_avg_ratio
+    conditions:
+    - fact_key: energy_selfcons_last_week_avg_ratio
+      op: <
+      value: 0.85
+    scenarios:
+    - selfcons_down_weekly_v1

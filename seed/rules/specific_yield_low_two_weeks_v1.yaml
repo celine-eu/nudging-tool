@@ -1,0 +1,19 @@
+rules:
+- id: specific_yield_low_two_weeks_v1
+  name: Low specific yield (2w)
+  enabled: true
+  family: system
+  type: alert
+  severity: alert
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: two_weeks
+    required_facts:
+    - specific_yield_last_two_weeks_avg
+    conditions:
+    - fact_key: specific_yield_last_two_weeks_avg
+      op: <
+      value: 750
+    scenarios:
+    - specific_yield_low_two_weeks_v1

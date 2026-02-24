@@ -1,0 +1,5 @@
+title_jinja: "\xA1Felicidades!"
+body_jinja: "\xA1Felicidades!\nHas reducido m\xE1s de un {{ delta_pct | round(2) }}%\
+  \ tu importaci\xF3n de energ\xEDa de la red respecto al mes anterior.\nAjustar los\
+  \ consumos a las horas de producci\xF3n fotovoltaica te ayuda a ser m\xE1s autosuficiente\
+  \ y a reducir el coste de la factura."

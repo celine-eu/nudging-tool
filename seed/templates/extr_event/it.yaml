@@ -1,0 +1,5 @@
+title_jinja: Avviso!
+body_jinja: "Avviso!\n{{ day_label }}, tra le {{ window_start }} e le {{ window_end\
+  \ }}, \xE8 previsto un evento meteorologico estremo {{ event }}.\nSe possibile,\
+  \ cerca di programmare i tuoi consumi energetici al di fuori di questa fascia oraria\
+  \ per contribuire a ridurre lo stress sulla rete elettrica."

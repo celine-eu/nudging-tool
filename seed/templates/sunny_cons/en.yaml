@@ -1,0 +1,8 @@
+title_jinja: Opportunity!
+body_jinja: 'Opportunity!
+
+  {{ day_label }} between {{ window_start }} and {{ window_end }} the weather is forecasted
+  to be sunny and clear, therefore photovoltaic production would be ideal.
+
+  Energy consumption during these hours supports electricity sharing within the REC
+  and contributes to maximizing incentives.'

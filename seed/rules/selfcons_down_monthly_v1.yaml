@@ -1,0 +1,19 @@
+rules:
+- id: selfcons_down_monthly_v1
+  name: Self-cons down 15% MoM
+  enabled: true
+  family: energy
+  type: alert
+  severity: alert
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: monthly
+    required_facts:
+    - energy_selfcons_last_month_avg_ratio
+    conditions:
+    - fact_key: energy_selfcons_last_month_avg_ratio
+      op: <
+      value: 0.85
+    scenarios:
+    - selfcons_down_monthly_v1

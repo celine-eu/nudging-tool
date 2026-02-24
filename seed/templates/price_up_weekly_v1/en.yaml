@@ -1,0 +1,7 @@
+title_jinja: Price up
+body_jinja: 'Alert!
+
+  The average daily energy price last week increased by about {{ ((price_last_week_avg_ratio
+  - 1) * 100) | round(0) }}% compared to the previous week.
+
+  Using more energy during PV production hours can help reduce grid imports and costs.'

@@ -1,0 +1,5 @@
+title_jinja: Congratulazioni!
+body_jinja: "Congratulazioni!\nHai ridotto l\u2019energia prelevata dalla rete di\
+  \ oltre il {{ delta_pct | round(2) }}% rispetto al mese precedente.\nAdeguare i\
+  \ consumi alle ore di produzione fotovoltaica ti aiuta a essere pi\xF9 autosufficiente\
+  \ e a ridurre il costo della bolletta."

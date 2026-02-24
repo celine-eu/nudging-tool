@@ -1,0 +1,7 @@
+title_jinja: Bill up
+body_jinja: 'Heads up!
+
+  Your bill last month increased by about {{ ((cost_last_month_total_ratio - 1) *
+  100) | round(0) }}% compared to the previous month.
+
+  Open the app to review imports, self-consumption, and price trends.'

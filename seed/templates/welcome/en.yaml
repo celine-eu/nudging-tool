@@ -1,0 +1,7 @@
+title_jinja: Welcome
+body_jinja: "Hello!\nWelcome to the notification service of your Energy Community.\
+  \ This service complements the web app, which you\u2019ve already accessed, to help\
+  \ you better understand your energy consumption and make the most of the solar energy\
+  \ production assigned to you.\nCheck the user manual, available in the help center,\
+  \ to better understand the visualizations or get in touch using the contact form\
+  \ you'll find there."

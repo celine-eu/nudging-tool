@@ -1,0 +1,6 @@
+title_jinja: Alerta!
+body_jinja: "Alerta!\nHas augmentat en un {{ delta_pct | round(2) }}% la importaci\xF3\
+  \ d'energia de la xarxa, i aix\xF2 pot tenir un impacte en al teva factura!\nAjustar\
+  \ els consums a les hores de producci\xF3 fotovoltaica et pot ajudar a reduir la\
+  \ importaci\xF3 d'energia de la xarxa.\nEntra a l'aplicaci\xF3 i consulta el teu\
+  \ perfil per saber com fer-ho i saber l'estalvi potencial que pots aconseguir!"

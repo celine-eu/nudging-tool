@@ -1,0 +1,5 @@
+title_jinja: Prezzo in aumento
+body_jinja: "Avviso!\nIl prezzo medio giornaliero dell\u2019energia nell\u2019ultima\
+  \ settimana \xE8 aumentato di circa {{ ((price_last_week_avg_ratio - 1) * 100) |\
+  \ round(0) }}% rispetto alla settimana precedente.\nConsumare di pi\xF9 nelle ore\
+  \ di produzione FV pu\xF2 aiutarti a ridurre i prelievi dalla rete e i costi."

@@ -1,0 +1,5 @@
+title_jinja: Autoconsumo in calo
+body_jinja: "Attenzione!\nIl tuo autoconsumo medio giornaliero dell\u2019ultima settimana\
+  \ \xE8 diminuito di circa {{ ((1 - energy_selfcons_last_week_avg_ratio) * 100) |\
+  \ round(0) }}% rispetto alla settimana precedente.\nProva a spostare alcuni consumi\
+  \ nelle ore di maggiore produzione."

@@ -1,0 +1,14 @@
+rules:
+- id: summer
+  name: Summer message
+  enabled: true
+  family: seasonal
+  type: informative
+  severity: info
+  version: 1
+  definition:
+    kind: static_message
+    required_facts: []
+    dedup_window: yearly
+    scenarios:
+    - summer

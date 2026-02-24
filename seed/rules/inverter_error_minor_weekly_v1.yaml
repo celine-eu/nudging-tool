@@ -1,0 +1,19 @@
+rules:
+- id: inverter_error_minor_weekly_v1
+  name: Inverter error (minor)
+  enabled: true
+  family: system
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: weekly
+    required_facts:
+    - system_status_error_last_week_total
+    conditions:
+    - fact_key: system_status_error_last_week_total
+      op: '>='
+      value: 1
+    scenarios:
+    - inverter_error_minor_weekly_v1

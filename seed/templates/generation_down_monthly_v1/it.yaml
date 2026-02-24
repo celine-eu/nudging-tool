@@ -1,0 +1,5 @@
+title_jinja: Produzione in calo
+body_jinja: "Avviso!\nLa tua produzione media giornaliera dell\u2019ultimo mese \xE8\
+  \ diminuita di circa {{ ((1 - energy_generation_last_month_avg_ratio) * 100) | round(0)\
+  \ }}% rispetto al mese precedente.\nApri l\u2019app per verificare l\u2019andamento\
+  \ della produzione e possibili cause (meteo, impianto, abitudini di consumo)."

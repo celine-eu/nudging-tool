@@ -1,0 +1,7 @@
+title_jinja: Low specific yield
+body_jinja: 'Alert!
+
+  Your average specific yield over the last two weeks is {{ specific_yield_last_two_weeks_avg
+  | round(0) }} kWh/kWp, which is lower than expected.
+
+  Check the app for production details and consider contacting support if this continues.'

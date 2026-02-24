@@ -1,0 +1,14 @@
+rules:
+- id: form
+  name: Form reminder
+  enabled: true
+  family: onboarding
+  type: informative
+  severity: info
+  version: 1
+  definition:
+    kind: static_message
+    required_facts: []
+    dedup_window: weekly
+    scenarios:
+    - form

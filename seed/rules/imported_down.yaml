@@ -1,0 +1,19 @@
+rules:
+- id: imported_down
+  name: "Imported \u2193"
+  enabled: true
+  family: energy
+  type: informative
+  severity: info
+  version: 1
+  definition:
+    kind: imported_down
+    required_facts:
+    - period
+    - delta_pct
+    - cur
+    - prev
+    dedup_window: daily
+    threshold_pct: -5
+    scenarios:
+    - imported_down

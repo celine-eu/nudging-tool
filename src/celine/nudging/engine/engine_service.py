@@ -141,6 +141,27 @@ async def _filter_rule_ids_by_definition(
         if str((definition or {}).get("dedup_window") or "").lower() == wanted
     ]
 
+
+async def _resolve_rule_ids_from_db(
+    db: AsyncSession, scenario: str
+) -> list[str]:
+    if not scenario:
+        return []
+    res = await db.execute(
+        select(Rule.id, Rule.scenarios, Rule.definition).where(Rule.enabled.is_(True))
+    )
+    out: list[str] = []
+    for rid, scenarios, definition in res.all():
+        sc_list: list[str] = []
+        if isinstance(scenarios, list):
+            sc_list.extend([s for s in scenarios if isinstance(s, str)])
+        defn_sc = (definition or {}).get("scenarios")
+        if isinstance(defn_sc, list):
+            sc_list.extend([s for s in defn_sc if isinstance(s, str)])
+        if scenario in sc_list:
+            out.append(str(rid))
+    return out
+
 async def _resolve_lang(
     db: AsyncSession,
     *,
@@ -318,27 +339,78 @@ def _evaluate_passthrough(rule: Rule, facts: dict) -> tuple[bool, dict, str | No
     return True, dict(facts), None
 
 
+def _coerce_num(value) -> float | None:
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _compare(op: str, left, right) -> bool | None:
+    if op in {"<", "<=", ">", ">="}:
+        l = _coerce_num(left)
+        r = _coerce_num(right)
+        if l is None or r is None:
+            return None
+        if op == "<":
+            return l < r
+        if op == "<=":
+            return l <= r
+        if op == ">":
+            return l > r
+        if op == ">=":
+            return l >= r
+    if op == "==":
+        return left == right
+    if op == "!=":
+        return left != right
+    return None
+
+
+def _evaluate_kpi_conditions(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
+    conditions = (rule.definition or {}).get("conditions") or []
+    if not isinstance(conditions, list) or not conditions:
+        return False, dict(facts), "missing_conditions"
+
+    for cond in conditions:
+        if not isinstance(cond, dict):
+            return False, dict(facts), "invalid_condition"
+        fact_key = cond.get("fact_key")
+        op = cond.get("op")
+        if not isinstance(fact_key, str) or not fact_key:
+            return False, dict(facts), "invalid_fact_key"
+        if not isinstance(op, str) or not op:
+            return False, dict(facts), "invalid_op"
+        if fact_key not in facts:
+            return False, dict(facts), f"missing_fact:{fact_key}"
+        value = cond.get("value")
+        cmp_res = _compare(op, facts.get(fact_key), value)
+        if cmp_res is None:
+            return False, dict(facts), f"invalid_compare:{fact_key}"
+        if not cmp_res:
+            return False, dict(facts), "condition_not_met"
+
+    return True, dict(facts), None
+
+
+_EVALUATORS: dict[str, callable] = {
+    "static_message": _evaluate_static_message,
+    "imported_up": _evaluate_imported_up,
+    "imported_down": _evaluate_imported_down,
+    "kpi_conditions": _evaluate_kpi_conditions,
+    "sunny_pros": _evaluate_passthrough,
+    "sunny_cons": _evaluate_passthrough,
+    "extr_event": _evaluate_passthrough,
+    "price_up": _evaluate_passthrough,
+    "price_down": _evaluate_passthrough,
+}
+
+
 def _evaluate_rule(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
     kind = str((rule.definition or {}).get("kind") or "").strip().lower()
-
-    if kind == "static_message":
-        return _evaluate_static_message(rule, facts)
-
-    if kind == "imported_up":
-        return _evaluate_imported_up(rule, facts)
-
-    if kind == "imported_down":
-        return _evaluate_imported_down(rule, facts)
-
-    # Weather / external events
-    if kind in {"sunny_pros", "sunny_cons", "extr_event"}:
-        return _evaluate_passthrough(rule, facts)
-
-    # Price nudges (se poi vuoi, puoi mettere gating)
-    if kind in {"price_up", "price_down"}:
-        return _evaluate_passthrough(rule, facts)
-
-    # Default safe
+    fn = _EVALUATORS.get(kind)
+    if fn:
+        return fn(rule, facts)
     return _evaluate_passthrough(rule, facts)
 
 
@@ -411,7 +483,9 @@ async def run_engine_batch(
         ]
 
     facts_in = _normalize_time_fields(facts_in_raw, ts)
-    rule_ids_all = _resolve_rule_ids_from_scenario(scenario)
+    rule_ids_all = await _resolve_rule_ids_from_db(db, scenario)
+    if not rule_ids_all:
+        rule_ids_all = _resolve_rule_ids_from_scenario(scenario)
     if not rule_ids_all:
         await _log_status(
             db,
