@@ -1,5 +1,0 @@
-title_jinja: Bolletta in calo
-body_jinja: "Buone notizie!\nLa tua bolletta dell\u2019ultimo mese \xE8 diminuita\
-  \ di circa {{ ((1 - cost_last_month_total_ratio) * 100) | round(0) }}% rispetto\
-  \ al mese precedente.\nContinua a sfruttare le ore di produzione FV per mantenere\
-  \ il risparmio."

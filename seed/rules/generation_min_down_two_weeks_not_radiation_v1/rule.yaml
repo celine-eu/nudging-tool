@@ -1,0 +1,25 @@
+rules:
+- id: generation_min_down_two_weeks_not_radiation_v1
+  name: Min gen down 25% (2w)
+  enabled: true
+  family: system
+  type: alert
+  severity: alert
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: two_weeks
+    required_facts:
+    - energy_generation_last_two_weeks_min_ratio
+    - radiation_ghi_last_two_weeks_min_ratio
+    conditions:
+    - fact_key: energy_generation_last_two_weeks_min_ratio
+      op: <
+      value: 0.75
+    - fact_key: radiation_ghi_last_two_weeks_min_ratio
+      op: >
+      value: 0.95
+    logic: AND
+    scenarios:
+    - generation_min_down_two_weeks_not_radiation_v1
+    evaluator_path: evaluate.py

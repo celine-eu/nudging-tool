@@ -91,7 +91,7 @@ def _fetch_token_client_credentials(
     return resp.json()["access_token"]
 
 
-def _load_seed(seed_dir: Path) -> tuple[list, list, list]:
+def _load_seed(seed_dir: Path) -> tuple[list, list, list, list]:
     """Load seed from directory (supports legacy YAML files)."""
     seed = load_seed_dir(seed_dir)
     validated, errors = validate_seed(seed)
@@ -99,7 +99,12 @@ def _load_seed(seed_dir: Path) -> tuple[list, list, list]:
         for e in errors:
             typer.echo(f"[error] {e}", err=True)
         raise typer.Exit(1)
-    return validated.rules, validated.templates, validated.preferences
+    return (
+        validated.rules,
+        validated.templates,
+        validated.preferences,
+        validated.overrides,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -184,12 +189,12 @@ def apply(
     # ------------------------------------------------------------------
     # 1. Load and validate YAML
     # ------------------------------------------------------------------
-    rules, templates, preferences = _load_seed(seed_dir)
-    total = len(rules) + len(templates) + len(preferences)
+    rules, templates, preferences, overrides = _load_seed(seed_dir)
+    total = len(rules) + len(templates) + len(preferences) + len(overrides)
 
     typer.echo(
         f"Loaded seed: {len(rules)} rules, {len(templates)} templates, "
-        f"{len(preferences)} preferences  (total {total})"
+        f"{len(preferences)} preferences, {len(overrides)} overrides  (total {total})"
     )
 
     if dry_run:
@@ -271,6 +276,7 @@ def apply(
         "rules": rules,
         "templates": templates,
         "preferences": preferences,
+        "overrides": overrides,
     }
 
     if verbose:

@@ -1,0 +1,5 @@
+title_jinja: Opportunità!
+body_jinja: |
+  Opportunità!
+  {{ day_label }}, tra le {{ window_start }} e le {{ window_end }}, è previsto tempo soleggiato e sereno, condizioni ideali per la produzione fotovoltaica.
+  Consumare energia durante queste ore ti aiuta a ridurre i prelievi dalla rete e a diventare più autosufficiente.

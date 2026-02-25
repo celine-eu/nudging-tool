@@ -1,8 +1,0 @@
-title_jinja: Low generation (2w)
-body_jinja: 'Alert!
-
-  Minimum daily generation in the last two weeks dropped by about {{ ((1 - energy_generation_last_two_weeks_min_ratio)
-  * 100) | round(0) }}%, while radiation stayed almost stable.
-
-  This may indicate a technical issue. Please check the app or contact support if
-  needed.'

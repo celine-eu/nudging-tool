@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from celine.nudging.config.settings import settings
-from celine.nudging.db.models import Rule, Template, UserPreference
+from celine.nudging.db.models import Rule, RuleOverride, Template, UserPreference
 from celine.nudging.db.session import AsyncSessionLocal
 from celine.nudging.seed import load_seed_dir, validate_seed
 
@@ -108,6 +108,27 @@ async def upsert_preference(db: AsyncSession, p: dict):
     obj.consents = p.get("consents", {})
 
 
+async def upsert_rule_override(db: AsyncSession, o: dict):
+    rule_id = o["rule_id"]
+    community_id = o["community_id"]
+
+    existing = await db.execute(
+        select(RuleOverride).where(
+            RuleOverride.rule_id == rule_id,
+            RuleOverride.community_id == community_id,
+        )
+    )
+    obj = existing.scalar_one_or_none()
+    if obj is None:
+        obj = RuleOverride(rule_id=rule_id, community_id=community_id)
+        db.add(obj)
+
+    if "enabled_override" in o:
+        obj.enabled_override = o.get("enabled_override")
+    if "definition_override" in o:
+        obj.definition_override = o.get("definition_override") or {}
+
+
 async def main():
     seed = load_seed_dir(SEED_DIR)
     seed, errors = validate_seed(seed)
@@ -119,6 +140,7 @@ async def main():
     rules_y = seed.rules
     tmpl_y = seed.templates
     pref_y = seed.preferences
+    overrides_y = seed.overrides
 
     async with AsyncSessionLocal() as db:
         for r in rules_y:
@@ -130,10 +152,14 @@ async def main():
         for p in pref_y:
             await upsert_preference(db, p)
 
+        for o in overrides_y:
+            await upsert_rule_override(db, o)
+
         await db.commit()
 
     print(
-        f"Seed completed: {len(rules_y)} rules, {len(tmpl_y)} templates, {len(pref_y)} preferences."
+        f"Seed completed: {len(rules_y)} rules, {len(tmpl_y)} templates, "
+        f"{len(pref_y)} preferences, {len(overrides_y)} overrides."
     )
 
 

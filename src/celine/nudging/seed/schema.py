@@ -23,7 +23,6 @@ class RuleSeed(BaseModel):
     def _merge_scenarios(self) -> "RuleSeed":
         if self.scenarios:
             merged = dict(self.definition or {})
-            # Prefer explicit definition.scenarios if already set.
             if not merged.get("scenarios"):
                 merged["scenarios"] = list(self.scenarios)
             self.definition = merged
@@ -60,3 +59,12 @@ class PreferenceSeed(BaseModel):
 
     max_per_day: Optional[int] = None
     consents: Dict[str, Any] = Field(default_factory=dict)
+
+
+class RuleOverrideSeed(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rule_id: str
+    community_id: str
+    enabled_override: Optional[bool] = None
+    definition_override: Dict[str, Any] = Field(default_factory=dict)

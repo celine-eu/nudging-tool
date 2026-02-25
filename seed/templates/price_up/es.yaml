@@ -1,7 +1,0 @@
-title_jinja: "\xA1Alerta!"
-body_jinja: "\xA1Alerta!\nEl precio por hora de la energ\xEDa (\u20AC/kWh) en tarifa\
-  \ indexada ha aumentado significativamente.\nEl consumo en esta franja horaria puede\
-  \ suponer un aumento de la factura de la luz.\nConsumir energ\xEDa en las horas\
-  \ de producci\xF3n fotovoltaica puede ayudarte a reducir la importaci\xF3n de electricidad.\
-  \ Entra en la aplicaci\xF3n y consulta tu perfil de consumo para conocer el ahorro\
-  \ potencial que puedes conseguir."

@@ -1,0 +1,5 @@
+title_jinja: Anomalia produzione
+body_jinja: |
+  Avviso!
+  La produzione dell’ultimo mese è diminuita di circa {{ ((1 - energy_generation_last_month_avg_ratio) * 100) | round(0) }}% mentre la radiazione è rimasta quasi stabile.
+  Potrebbe indicare un problema di impianto (inverter, ombreggiamenti, guasti). Controlla l’app e valuta di contattare l’assistenza.

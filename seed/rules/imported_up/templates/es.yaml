@@ -1,0 +1,6 @@
+title_jinja: ¡Alerta!
+body_jinja: |
+  ¡Alerta!
+  Has aumentado más de un {{ delta_pct | round(2) }}% la importación de energía de la red, y esto puede tener un impacto en tu factura.
+  Ajustar los consumos a las horas de producción fotovoltaica puede ayudarte a reducir la importación de energía de la red.
+  Entra en la aplicación y consulta tu perfil para saber cómo hacerlo y conocer el ahorro potencial que puedes conseguir.

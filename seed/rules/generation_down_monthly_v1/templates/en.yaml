@@ -1,0 +1,5 @@
+title_jinja: Generation down
+body_jinja: |
+  Alert!
+  Your average daily solar generation last month dropped by about {{ ((1 - energy_generation_last_month_avg_ratio) * 100) | round(0) }}% compared to the previous month.
+  Open the app to check production trends and potential causes (weather, system issues, or usage patterns).

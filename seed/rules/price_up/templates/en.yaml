@@ -1,0 +1,7 @@
+title_jinja: Alert!
+body_jinja: |
+  Alert!
+  Hourly energy price (€/kWh) in the indexed rate has increased significantly.
+  Consumption during this time period may lead to an increase in the electricity bill.
+  Consuming energy during photovoltaic production hours can help you reduce electricity imports.
+  Enter the application and check your consumption profile to find out the potential savings you can achieve.

@@ -1,5 +1,0 @@
-title_jinja: Errore inverter
-body_jinja: "Attenzione!\nNell\u2019ultima settimana \xE8 stato rilevato un errore\
-  \ \u201Cminore\u201D dell\u2019inverter ({{ system_status_error_last_week_total\
-  \ }} evento{{ 'i' if system_status_error_last_week_total|int != 1 else '' }}).\n\
-  Monitora la produzione in app e contatta l\u2019assistenza se gli errori continuano."

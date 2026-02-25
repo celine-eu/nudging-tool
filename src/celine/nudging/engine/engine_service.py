@@ -17,6 +17,7 @@ from celine.nudging.db.models import (
     Notification,
     NudgeLog,
     Rule,
+    RuleOverride,
     Template,
     UserPreference,
 )
@@ -28,6 +29,7 @@ from celine.nudging.engine.rules.models import (
     NudgeType,
 )
 from celine.nudging.engine.templates.renderer import render
+from celine.nudging.engine.rules.evaluators import evaluate_rule
 
 NON_ENERGY_FAMILIES: set[str] = {
     "system",
@@ -257,6 +259,40 @@ async def _load_rule_and_template(
     raise ValueError(f"No template found for rule={rule_id} lang={lang}")
 
 
+def _deep_merge(base: dict, override: dict) -> dict:
+    out = dict(base)
+    for k, v in override.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = _deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+async def _apply_rule_override(
+    db: AsyncSession, rule: Rule, community_id: str | None
+) -> tuple[Rule, str | None]:
+    if not community_id:
+        return rule, None
+    res = await db.execute(
+        select(RuleOverride).where(
+            RuleOverride.rule_id == rule.id,
+            RuleOverride.community_id == community_id,
+        )
+    )
+    override = res.scalar_one_or_none()
+    if override is None:
+        return rule, None
+
+    if override.enabled_override is not None:
+        rule.enabled = bool(override.enabled_override)
+
+    if override.definition_override:
+        rule.definition = _deep_merge(rule.definition or {}, override.definition_override)
+
+    return rule, "override_applied"
+
+
 def _dedup_scope(rule: Rule, facts: dict) -> str:
     window = str((rule.definition or {}).get("dedup_window") or "").lower().strip()
     if window == "always":
@@ -292,126 +328,8 @@ def _validate_required_facts(rule: Rule, facts: dict) -> tuple[bool, list[str]]:
     return len(missing) == 0, missing
 
 
-def _evaluate_imported_up(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
-    """
-    Rule-specific for now.
-    Requires: delta_pct already computed by DT.
-    Returns: triggered, enriched_facts, reason_if_not_triggered
-    """
-    threshold_pct = float(rule.definition.get("threshold_pct", 20.0))
-
-    delta_pct = facts.get("delta_pct")
-    if delta_pct is None:
-        return False, facts, "missing_fact:delta_pct"
-
-    try:
-        triggered = float(delta_pct) > threshold_pct
-    except Exception:
-        return False, {**facts, "delta_pct": delta_pct}, "invalid_fact:delta_pct"
-
-    enriched = {**facts, "threshold_pct": threshold_pct}
-    if not triggered:
-        return False, enriched, "condition_not_met"
-
-    return True, enriched, None
-
-
-def _evaluate_imported_down(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
-    threshold_pct = float(rule.definition.get("threshold_pct", -5.0))
-    delta_pct = facts.get("delta_pct")
-    if delta_pct is None:
-        return False, facts, "missing_fact:delta_pct"
-    try:
-        triggered = float(delta_pct) < threshold_pct
-    except Exception:
-        return False, {**facts, "delta_pct": delta_pct}, "invalid_fact:delta_pct"
-    enriched = {**facts, "threshold_pct": threshold_pct}
-    return (
-        (True, enriched, None) if triggered else (False, enriched, "condition_not_met")
-    )
-
-
-def _evaluate_static_message(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
-    return True, dict(facts), None
-
-
-def _evaluate_passthrough(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
-    return True, dict(facts), None
-
-
-def _coerce_num(value) -> float | None:
-    try:
-        return float(value)
-    except Exception:
-        return None
-
-
-def _compare(op: str, left, right) -> bool | None:
-    if op in {"<", "<=", ">", ">="}:
-        l = _coerce_num(left)
-        r = _coerce_num(right)
-        if l is None or r is None:
-            return None
-        if op == "<":
-            return l < r
-        if op == "<=":
-            return l <= r
-        if op == ">":
-            return l > r
-        if op == ">=":
-            return l >= r
-    if op == "==":
-        return left == right
-    if op == "!=":
-        return left != right
-    return None
-
-
-def _evaluate_kpi_conditions(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
-    conditions = (rule.definition or {}).get("conditions") or []
-    if not isinstance(conditions, list) or not conditions:
-        return False, dict(facts), "missing_conditions"
-
-    for cond in conditions:
-        if not isinstance(cond, dict):
-            return False, dict(facts), "invalid_condition"
-        fact_key = cond.get("fact_key")
-        op = cond.get("op")
-        if not isinstance(fact_key, str) or not fact_key:
-            return False, dict(facts), "invalid_fact_key"
-        if not isinstance(op, str) or not op:
-            return False, dict(facts), "invalid_op"
-        if fact_key not in facts:
-            return False, dict(facts), f"missing_fact:{fact_key}"
-        value = cond.get("value")
-        cmp_res = _compare(op, facts.get(fact_key), value)
-        if cmp_res is None:
-            return False, dict(facts), f"invalid_compare:{fact_key}"
-        if not cmp_res:
-            return False, dict(facts), "condition_not_met"
-
-    return True, dict(facts), None
-
-
-_EVALUATORS: dict[str, callable] = {
-    "static_message": _evaluate_static_message,
-    "imported_up": _evaluate_imported_up,
-    "imported_down": _evaluate_imported_down,
-    "kpi_conditions": _evaluate_kpi_conditions,
-    "sunny_pros": _evaluate_passthrough,
-    "sunny_cons": _evaluate_passthrough,
-    "extr_event": _evaluate_passthrough,
-    "price_up": _evaluate_passthrough,
-    "price_down": _evaluate_passthrough,
-}
-
-
 def _evaluate_rule(rule: Rule, facts: dict) -> tuple[bool, dict, str | None]:
-    kind = str((rule.definition or {}).get("kind") or "").strip().lower()
-    fn = _EVALUATORS.get(kind)
-    if fn:
-        return fn(rule, facts)
-    return _evaluate_passthrough(rule, facts)
+    return evaluate_rule(rule, facts)
 
 
 def _facts_from_event(evt: DigitalTwinEvent) -> dict:
@@ -552,6 +470,32 @@ async def _run_single_rule(
 
     try:
         rule, tmpl = await _load_rule_and_template(db, rule_id, lang)
+        rule, _ = await _apply_rule_override(
+            db, rule, str(evt.community_id) if evt.community_id is not None else None
+        )
+        if not rule.enabled:
+            await _log_status(
+                db,
+                status=EngineResultStatus.NOT_TRIGGERED,
+                rule_id=str(rule.id),
+                user_id=str(evt.user_id),
+                community_id=str(evt.community_id) if evt.community_id is not None else None,
+                scope=str(
+                    facts_in.get("time")
+                    or facts_in.get("date")
+                    or facts_in.get("week")
+                    or facts_in.get("period")
+                    or "__no_scope__"
+                ),
+                scenario=scenario,
+                facts_version=facts_version_str,
+                facts=facts_in,
+                details={"reason": "disabled_by_override"},
+            )
+            return EngineResult(
+                status=EngineResultStatus.NOT_TRIGGERED,
+                reason="disabled_by_override",
+            )
         scope = _dedup_scope(rule, facts_in)
     except ValueError as e:
         await _log_status(

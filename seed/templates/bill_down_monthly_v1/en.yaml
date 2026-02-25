@@ -1,7 +1,0 @@
-title_jinja: Bill down
-body_jinja: 'Good news!
-
-  Your bill last month decreased by about {{ ((1 - cost_last_month_total_ratio) *
-  100) | round(0) }}% compared to the previous month.
-
-  Keep using energy during PV production hours to maintain savings.'

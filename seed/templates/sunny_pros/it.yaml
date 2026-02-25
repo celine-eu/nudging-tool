@@ -1,5 +1,0 @@
-title_jinja: "Opportunit\xE0!"
-body_jinja: "Opportunit\xE0!\n{{ day_label }}, tra le {{ window_start }} e le {{ window_end\
-  \ }}, \xE8 previsto tempo soleggiato e sereno, condizioni ideali per la produzione\
-  \ fotovoltaica.\nConsumare energia durante queste ore ti aiuta a ridurre i prelievi\
-  \ dalla rete e a diventare pi\xF9 autosufficiente."

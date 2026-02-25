@@ -1,0 +1,20 @@
+rules:
+- id: exported_energy_info_monthly_v1
+  name: Exported info
+  enabled: true
+  family: billing
+  type: informative
+  severity: info
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: monthly
+    required_facts:
+    - event_name
+    conditions:
+    - fact_key: event_name
+      op: ==
+      value: exported_energy_info
+    scenarios:
+    - exported_energy_info_monthly_v1
+    evaluator_path: evaluate.py

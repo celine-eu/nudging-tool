@@ -47,6 +47,36 @@ class Rule(Base):
     templates: Mapped[list["Template"]] = relationship(
         back_populates="rule", cascade="all, delete-orphan"
     )
+    overrides: Mapped[list["RuleOverride"]] = relationship(
+        back_populates="rule", cascade="all, delete-orphan"
+    )
+
+
+class RuleOverride(Base):
+    __tablename__ = "rule_overrides"
+    __table_args__ = (
+        UniqueConstraint("rule_id", "community_id", name="uq_rule_override"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default=lambda: uuid4().hex
+    )
+    rule_id: Mapped[str] = mapped_column(
+        ForeignKey("rules.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    community_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+
+    enabled_override: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    definition_override: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+    rule: Mapped["Rule"] = relationship(back_populates="overrides")
 
 class Template(Base):
     __tablename__ = "templates"

@@ -1,5 +1,0 @@
-title_jinja: Felicitats!
-body_jinja: "Felicitats!\nHas redu\xEFt un {{ delta_pct | round(2) }}% la teva importaci\xF3\
-  \ d'energia de xarxa respecte al mes anterior!\nAjustar els consums a les hores\
-  \ de producci\xF3 fotovoltaica t'ajuda a ser m\xE9s autosuficient i a reduir el\
-  \ cost de la factura!"

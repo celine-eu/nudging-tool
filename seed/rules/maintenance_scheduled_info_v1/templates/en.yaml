@@ -1,0 +1,5 @@
+title_jinja: Maintenance scheduled
+body_jinja: |
+  Info:
+  A maintenance visit has been scheduled.
+  Please check the details in the app.

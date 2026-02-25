@@ -1,0 +1,6 @@
+title_jinja: Alerta!
+body_jinja: |
+  Alerta!
+  Has augmentat en un {{ delta_pct | round(2) }}% la importació d'energia de la xarxa, i això pot tenir un impacte en al teva factura!
+  Ajustar els consums a les hores de producció fotovoltaica et pot ajudar a reduir la importació d'energia de la xarxa.
+  Entra a l'aplicació i consulta el teu perfil per saber com fer-ho i saber l'estalvi potencial que pots aconseguir!

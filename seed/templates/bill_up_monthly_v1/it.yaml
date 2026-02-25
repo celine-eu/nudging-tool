@@ -1,5 +1,0 @@
-title_jinja: Bolletta in aumento
-body_jinja: "Attenzione!\nLa tua bolletta dell\u2019ultimo mese \xE8 aumentata di\
-  \ circa {{ ((cost_last_month_total_ratio - 1) * 100) | round(0) }}% rispetto al\
-  \ mese precedente.\nApri l\u2019app per rivedere prelievi, autoconsumo e andamento\
-  \ dei prezzi."

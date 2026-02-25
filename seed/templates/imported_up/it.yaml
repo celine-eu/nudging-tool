@@ -1,6 +1,0 @@
-title_jinja: Avviso!
-body_jinja: "Avviso!\nHai aumentato l\u2019energia prelevata dalla rete di oltre il\
-  \ {{ delta_pct | round(2) }}% e questo potrebbe incidere sulla bolletta.\nAdeguare\
-  \ i consumi alle ore di produzione fotovoltaica ti aiuta a essere pi\xF9 autosufficiente\
-  \ e a ridurre il costo della bolletta.\nApri l\u2019applicazione e controlla il\
-  \ tuo profilo di consumo per scoprire i potenziali risparmi."
