@@ -1,0 +1,5 @@
+title_jinja: Imported energy info
+body_jinja: |
+  Info:
+  Your grid import is higher than the benchmark.
+  Open the app to see where you can shift consumption to PV hours and reduce grid imports.

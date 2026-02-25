@@ -16,7 +16,12 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from celine.nudging.db.seed_db import upsert_preference, upsert_rule, upsert_template
+from celine.nudging.db.seed_db import (
+    upsert_preference,
+    upsert_rule,
+    upsert_rule_override,
+    upsert_template,
+)
 from celine.nudging.db.session import get_db
 from celine.nudging.security.policies import require_admin
 from celine.sdk.auth import JwtUser
@@ -34,6 +39,7 @@ class SeedApplyRequest(BaseModel):
     rules: list[dict] = []
     templates: list[dict] = []
     preferences: list[dict] = []
+    overrides: list[dict] = []
 
 
 class SeedApplyResponse(BaseModel):
@@ -41,6 +47,7 @@ class SeedApplyResponse(BaseModel):
     rules: int
     templates: int
     preferences: int
+    overrides: int
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +79,9 @@ async def seed_apply(
     for p in body.preferences:
         await upsert_preference(db, p)
 
+    for o in body.overrides:
+        await upsert_rule_override(db, o)
+
     await db.commit()
 
     logger.info(
@@ -79,10 +89,12 @@ async def seed_apply(
         len(body.rules),
         len(body.templates),
         len(body.preferences),
+        len(body.overrides),
     )
 
     return SeedApplyResponse(
         rules=len(body.rules),
         templates=len(body.templates),
         preferences=len(body.preferences),
+        overrides=len(body.overrides),
     )

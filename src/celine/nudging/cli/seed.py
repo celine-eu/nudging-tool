@@ -22,9 +22,9 @@ from typing import Optional
 
 import httpx
 import typer
-import yaml
 
 from celine.nudging.config.settings import settings
+from celine.nudging.seed import load_seed_dir, validate_seed
 
 seed_app = typer.Typer(add_completion=False, help="Manage seed data")
 
@@ -91,21 +91,20 @@ def _fetch_token_client_credentials(
     return resp.json()["access_token"]
 
 
-def _load_seed(seed_dir: Path) -> tuple[list, list, list]:
-    """Load the three YAML files from seed_dir. Missing files are treated as empty."""
-
-    def _read(name: str, key: str) -> list:
-        p = seed_dir / name
-        if not p.exists():
-            typer.echo(f"  [warn] {name} not found — skipping.", err=True)
-            return []
-        data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
-        return data.get(key, [])
-
-    rules = _read("rules.yaml", "rules")
-    templates = _read("templates.yaml", "templates")
-    preferences = _read("preferences.yaml", "preferences")
-    return rules, templates, preferences
+def _load_seed(seed_dir: Path) -> tuple[list, list, list, list]:
+    """Load seed from directory (supports legacy YAML files)."""
+    seed = load_seed_dir(seed_dir)
+    validated, errors = validate_seed(seed)
+    if errors:
+        for e in errors:
+            typer.echo(f"[error] {e}", err=True)
+        raise typer.Exit(1)
+    return (
+        validated.rules,
+        validated.templates,
+        validated.preferences,
+        validated.overrides,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -190,12 +189,12 @@ def apply(
     # ------------------------------------------------------------------
     # 1. Load and validate YAML
     # ------------------------------------------------------------------
-    rules, templates, preferences = _load_seed(seed_dir)
-    total = len(rules) + len(templates) + len(preferences)
+    rules, templates, preferences, overrides = _load_seed(seed_dir)
+    total = len(rules) + len(templates) + len(preferences) + len(overrides)
 
     typer.echo(
         f"Loaded seed: {len(rules)} rules, {len(templates)} templates, "
-        f"{len(preferences)} preferences  (total {total})"
+        f"{len(preferences)} preferences, {len(overrides)} overrides  (total {total})"
     )
 
     if dry_run:
@@ -277,6 +276,7 @@ def apply(
         "rules": rules,
         "templates": templates,
         "preferences": preferences,
+        "overrides": overrides,
     }
 
     if verbose:

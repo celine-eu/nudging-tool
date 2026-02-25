@@ -1,0 +1,5 @@
+title_jinja: Autoconsumo in calo
+body_jinja: |
+  Avviso!
+  Il tuo autoconsumo medio giornaliero dell’ultimo mese è diminuito di circa {{ ((1 - energy_selfcons_last_month_avg_ratio) * 100) | round(0) }}% rispetto al mese precedente.
+  Controlla il profilo di consumo in app e valuta di spostare i carichi “flessibili” nelle ore di produzione FV.

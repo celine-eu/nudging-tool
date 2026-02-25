@@ -1,0 +1,5 @@
+title_jinja: Congratulations!
+body_jinja: |
+  Congratulations!
+  You have reduced your imported energy from the grid by more than {{ delta_pct | round(2) }}% compared to the previous month.
+  Adjusting consumption to the hours of photovoltaic production helps you be more self-sufficient and reduce the cost of the bill.

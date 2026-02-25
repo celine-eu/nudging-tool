@@ -1,0 +1,5 @@
+title_jinja: Generation anomaly
+body_jinja: |
+  Alert!
+  Generation last month decreased by about {{ ((1 - energy_generation_last_month_avg_ratio) * 100) | round(0) }}%, while solar radiation stayed almost stable.
+  This may indicate a system issue (inverter, shading, faults). Check the app and consider contacting support.

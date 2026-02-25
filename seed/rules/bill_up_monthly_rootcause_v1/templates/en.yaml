@@ -1,0 +1,5 @@
+title_jinja: Bill up (analysis)
+body_jinja: |
+  Alert!
+  Your bill increased, while price and self-consumption stayed almost stable and radiation decreased.
+  This pattern may be driven by lower solar availability. Check the app for detailed trends and tips to optimize usage.

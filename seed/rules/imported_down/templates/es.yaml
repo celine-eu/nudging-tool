@@ -1,0 +1,5 @@
+title_jinja: ¡Felicidades!
+body_jinja: |
+  ¡Felicidades!
+  Has reducido más de un {{ delta_pct | round(2) }}% tu importación de energía de la red respecto al mes anterior.
+  Ajustar los consumos a las horas de producción fotovoltaica te ayuda a ser más autosuficiente y a reducir el coste de la factura.

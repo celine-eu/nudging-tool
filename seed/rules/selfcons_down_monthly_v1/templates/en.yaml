@@ -1,0 +1,5 @@
+title_jinja: Self-consumption down
+body_jinja: |
+  Alert!
+  Your average daily self-consumption last month decreased by about {{ ((1 - energy_selfcons_last_month_avg_ratio) * 100) | round(0) }}% compared to the previous month.
+  Check your consumption profile in the app and consider moving flexible loads to PV production hours.

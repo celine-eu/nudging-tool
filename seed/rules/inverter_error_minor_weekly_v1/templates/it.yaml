@@ -1,0 +1,5 @@
+title_jinja: Errore inverter
+body_jinja: |
+  Attenzione!
+  Nell’ultima settimana è stato rilevato un errore “minore” dell’inverter ({{ system_status_error_last_week_total }} evento{{ 'i' if system_status_error_last_week_total|int != 1 else '' }}).
+  Monitora la produzione in app e contatta l’assistenza se gli errori continuano.

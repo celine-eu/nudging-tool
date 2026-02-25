@@ -1,0 +1,5 @@
+title_jinja: Opportunità!
+body_jinja: |
+  Opportunità!
+  {{ day_label }}, tra le {{ window_start }} e le {{ window_end }}, è previsto tempo soleggiato e sereno, condizioni ideali per la produzione fotovoltaica.
+  Il consumo di energia durante queste ore favorisce la condivisione dell’energia all’interno della CER e contribuisce a massimizzare gli incentivi.
