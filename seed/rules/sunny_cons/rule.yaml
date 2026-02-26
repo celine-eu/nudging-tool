@@ -1,0 +1,18 @@
+rules:
+- id: sunny_cons
+  name: Sunny (consumer)
+  enabled: true
+  family: weather
+  type: informative
+  severity: info
+  version: 1
+  definition:
+    kind: sunny_cons
+    required_facts:
+    - time
+    - from_hour
+    - to_hour
+    dedup_window: daily
+    scenarios:
+    - sunny_cons
+    evaluator_path: evaluate.py

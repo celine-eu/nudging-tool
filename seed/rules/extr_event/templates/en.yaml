@@ -1,0 +1,5 @@
+title_jinja: Alert!
+body_jinja: |
+  Alert!
+  {{ event }} is expected {{ day_label }} between {{ window_start }} and {{ window_end }}.
+  If you can, try to schedule your energy use outside this time window to help reduce stress on the power grid during extreme weather events.

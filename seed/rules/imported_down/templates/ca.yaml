@@ -1,0 +1,5 @@
+title_jinja: Felicitats!
+body_jinja: |
+  Felicitats!
+  Has reduït un {{ delta_pct | round(2) }}% la teva importació d'energia de xarxa respecte al mes anterior!
+  Ajustar els consums a les hores de producció fotovoltaica t'ajuda a ser més autosuficient i a reduir el cost de la factura!

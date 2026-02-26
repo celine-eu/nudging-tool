@@ -1,0 +1,5 @@
+title_jinja: Specific yield basso
+body_jinja: |
+  Avviso!
+  La media dello specific yield degli ultimi 15 giorni è {{ specific_yield_last_two_weeks_avg | round(0) }} kWh/kWp, un valore inferiore alle attese.
+  Controlla i dettagli in app e valuta di contattare l’assistenza se la situazione continua.

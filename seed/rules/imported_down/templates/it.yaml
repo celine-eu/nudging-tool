@@ -1,0 +1,5 @@
+title_jinja: Congratulazioni!
+body_jinja: |
+  Congratulazioni!
+  Hai ridotto l’energia prelevata dalla rete di oltre il {{ delta_pct | round(2) }}% rispetto al mese precedente.
+  Adeguare i consumi alle ore di produzione fotovoltaica ti aiuta a essere più autosufficiente e a ridurre il costo della bolletta.

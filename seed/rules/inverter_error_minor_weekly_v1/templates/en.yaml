@@ -1,0 +1,5 @@
+title_jinja: Inverter error
+body_jinja: |
+  Heads up!
+  A minor inverter error was detected over the last week ({{ system_status_error_last_week_total }} event{{ 's' if system_status_error_last_week_total|int != 1 else '' }}).
+  Keep an eye on production in the app and contact support if errors continue.

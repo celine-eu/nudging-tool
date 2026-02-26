@@ -1,0 +1,5 @@
+title_jinja: Self-consumption down
+body_jinja: |
+  Heads up!
+  Your average daily self-consumption last week decreased by about {{ ((1 - energy_selfcons_last_week_avg_ratio) * 100) | round(0) }}% compared to the previous week.
+  Try shifting more usage to sunny hours to increase self-consumption.

@@ -1,0 +1,5 @@
+title_jinja: Bolletta in aumento
+body_jinja: |
+  Attenzione!
+  La tua bolletta dell’ultimo mese è aumentata di circa {{ ((cost_last_month_total_ratio - 1) * 100) | round(0) }}% rispetto al mese precedente.
+  Apri l’app per rivedere prelievi, autoconsumo e andamento dei prezzi.

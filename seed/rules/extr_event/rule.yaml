@@ -1,0 +1,19 @@
+rules:
+- id: extr_event
+  name: Extreme event
+  enabled: true
+  family: weather
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: extr_event
+    required_facts:
+    - time
+    - from_hour
+    - to_hour
+    - event_type
+    dedup_window: daily
+    scenarios:
+    - extr_event
+    evaluator_path: evaluate.py

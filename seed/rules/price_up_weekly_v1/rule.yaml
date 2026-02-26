@@ -1,0 +1,20 @@
+rules:
+- id: price_up_weekly_v1
+  name: Price up 25% WoW
+  enabled: true
+  family: price
+  type: alert
+  severity: alert
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: weekly
+    required_facts:
+    - price_last_week_avg_ratio
+    conditions:
+    - fact_key: price_last_week_avg_ratio
+      op: >
+      value: 1.25
+    scenarios:
+    - price_up_weekly_v1
+    evaluator_path: evaluate.py

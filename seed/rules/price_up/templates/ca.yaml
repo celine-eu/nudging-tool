@@ -1,0 +1,6 @@
+title_jinja: Alerta!
+body_jinja: |
+  Alerta!
+  El preu hora de l'energia (€/kWh) en tarifa indexada ha augmentat significativament els darrers dies.
+  Consumir energia a les hores de producció fotovoltaica et pot ajudar a reduir la importació d'electricitat.
+  Entra a l'aplicació i consulta el teu perfil de consum per saber l'estalvi potencial que pots aconseguir!

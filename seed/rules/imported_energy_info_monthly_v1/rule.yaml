@@ -1,0 +1,20 @@
+rules:
+- id: imported_energy_info_monthly_v1
+  name: Imported info
+  enabled: true
+  family: energy
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: monthly
+    required_facts:
+    - event_name
+    conditions:
+    - fact_key: event_name
+      op: ==
+      value: imported_energy_info
+    scenarios:
+    - imported_energy_info_monthly_v1
+    evaluator_path: evaluate.py

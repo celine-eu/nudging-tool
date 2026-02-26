@@ -1,0 +1,6 @@
+title_jinja: ¡Alerta!
+body_jinja: |
+  ¡Alerta!
+  El precio por hora de la energía (€/kWh) en tarifa indexada ha aumentado significativamente.
+  El consumo en esta franja horaria puede suponer un aumento de la factura de la luz.
+  Consumir energía en las horas de producción fotovoltaica puede ayudarte a reducir la importación de electricidad. Entra en la aplicación y consulta tu perfil de consumo para conocer el ahorro potencial que puedes conseguir.

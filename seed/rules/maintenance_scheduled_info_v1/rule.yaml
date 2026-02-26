@@ -1,0 +1,20 @@
+rules:
+- id: maintenance_scheduled_info_v1
+  name: Maintenance scheduled
+  enabled: true
+  family: system
+  type: informative
+  severity: info
+  version: 1
+  definition:
+    kind: kpi_conditions
+    dedup_window: daily
+    required_facts:
+    - event_name
+    conditions:
+    - fact_key: event_name
+      op: ==
+      value: maintenance_scheduled
+    scenarios:
+    - maintenance_scheduled_info_v1
+    evaluator_path: evaluate.py

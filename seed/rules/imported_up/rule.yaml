@@ -1,0 +1,20 @@
+rules:
+- id: imported_up
+  name: Imported up
+  enabled: true
+  family: energy
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: imported_up
+    required_facts:
+    - time
+    - delta_pct
+    - cur
+    - prev
+    dedup_window: daily
+    threshold_pct: 20
+    scenarios:
+    - imported_up
+    evaluator_path: evaluate.py

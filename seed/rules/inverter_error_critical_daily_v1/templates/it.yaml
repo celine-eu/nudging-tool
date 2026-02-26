@@ -1,0 +1,5 @@
+title_jinja: Errore inverter critico
+body_jinja: |
+  Avviso!
+  Nelle ultime 24 ore è stato rilevato un errore critico dell’inverter ({{ system_status_error_last_day_total }} evento{{ 'i' if system_status_error_last_day_total|int != 1 else '' }}).
+  Se il problema persiste, contatta l’assistenza tramite l’app.
