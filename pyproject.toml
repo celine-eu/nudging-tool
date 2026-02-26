@@ -1,6 +1,6 @@
 [project]
 name = "celine-nudging"
-version = "0.1.0"
+version = "1.0.0"
 description = "CELINE Nudging tool"
 readme = "README.md"
 requires-python = ">=3.12"
