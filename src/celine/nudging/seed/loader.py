@@ -29,7 +29,8 @@ class SeedData:
 # YAML loading helpers
 # ---------------------------------------------------------------------------
 
-def _load_yaml(path: Path) -> Any:
+
+def load_yaml(path: Path) -> Any:
     try:
         return yaml.safe_load(path.read_text(encoding="utf-8"))
     except Exception as e:
@@ -75,7 +76,9 @@ def _infer_override_coords(root: Path, source: Path, item: dict) -> dict:
     return item
 
 
-def _normalize_items(payload: Any, key: str, source: Path, root: Path | None = None) -> List[dict]:
+def _normalize_items(
+    payload: Any, key: str, source: Path, root: Path | None = None
+) -> List[dict]:
     if payload is None:
         return []
     if isinstance(payload, list):
@@ -109,7 +112,7 @@ def _collect_from_dir(root: Path, key: str) -> List[dict]:
         return []
     items: List[dict] = []
     for path in sorted(root.rglob("*.yml")) + sorted(root.rglob("*.yaml")):
-        payload = _load_yaml(path)
+        payload = load_yaml(path)
         items.extend(_normalize_items(payload, key, path, root))
     return items
 
@@ -128,7 +131,7 @@ def _collect_rule_dirs(rules_dir: Path) -> tuple[list[dict], list[dict]]:
                 rule_file = candidate
                 break
         if rule_file is not None:
-            payload = _load_yaml(rule_file)
+            payload = load_yaml(rule_file)
             items = _normalize_items(payload, "rules", rule_file, rules_dir)
             for it in items:
                 if "id" not in it:
@@ -140,7 +143,7 @@ def _collect_rule_dirs(rules_dir: Path) -> tuple[list[dict], list[dict]]:
             for path in sorted(tmpl_dir.rglob("*.yml")) + sorted(
                 tmpl_dir.rglob("*.yaml")
             ):
-                payload = _load_yaml(path)
+                payload = load_yaml(path)
                 items = _normalize_items(payload, "templates", path, tmpl_dir)
                 for it in items:
                     it = _infer_template_coords(
@@ -154,7 +157,7 @@ def _collect_legacy(seed_dir: Path, name: str, key: str) -> List[dict]:
     path = seed_dir / name
     if not path.exists():
         return []
-    payload = _load_yaml(path)
+    payload = load_yaml(path)
     return _normalize_items(payload, key, path)
 
 
@@ -257,7 +260,9 @@ def validate_rule_definition(defn: Dict[str, Any]) -> List[str]:
     if not isinstance(kind, str) or not kind:
         errors.append("definition.kind is required")
     elif kind not in KNOWN_KINDS:
-        logger.warning("Unknown rule kind '%s' - allowing but skipping strict validation", kind)
+        logger.warning(
+            "Unknown rule kind '%s' - allowing but skipping strict validation", kind
+        )
 
     _validate_required_facts(defn, errors)
     _validate_scenarios(defn, errors)
