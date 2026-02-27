@@ -9,7 +9,7 @@ rules:
   definition:
     kind: imported_up
     required_facts:
-    - time
+    - period
     - delta_pct
     - cur
     - prev

@@ -9,7 +9,7 @@ rules:
   definition:
     kind: extr_event
     required_facts:
-    - time
+    - period
     - from_hour
     - to_hour
     - event_type

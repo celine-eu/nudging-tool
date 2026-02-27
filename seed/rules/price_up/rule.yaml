@@ -9,7 +9,7 @@ rules:
   definition:
     kind: price_up
     required_facts:
-    - time
+    - period
     dedup_window: daily
     scenarios:
     - price_up
