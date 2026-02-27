@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Routes that don't require a token (FastAPI / OpenAPI meta)
 _OPEN_PATHS: frozenset[str] = frozenset(
     {
+        "/health",
         "/docs",
         "/redoc",
         "/openapi.json",
