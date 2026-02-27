@@ -11,8 +11,10 @@ import logging
 from pathlib import Path
 
 from celine.nudging.config.settings import settings
+from celine.nudging.seed import (
+    load_seed_dir,
+)
 from celine.nudging.db.seed_db import (
-    load_yaml,
     upsert_preference,
     upsert_rule,
     upsert_template,
@@ -37,9 +39,11 @@ async def auto_seed() -> None:
         logger.warning("SEED_DIR %s does not exist — skipping auto-seed.", seed_dir)
         return
 
-    rules_data = load_yaml("rules.yaml").get("rules", [])
-    tmpl_data = load_yaml("templates.yaml").get("templates", [])
-    pref_data = load_yaml("preferences.yaml").get("preferences", [])
+    seeds = load_seed_dir(seed_dir)
+
+    rules_data = seeds.rules
+    tmpl_data = seeds.templates
+    pref_data = seeds.preferences
 
     if not any([rules_data, tmpl_data, pref_data]):
         logger.info("No seed data found in %s — skipping.", seed_dir)

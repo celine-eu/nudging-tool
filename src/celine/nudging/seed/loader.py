@@ -30,7 +30,7 @@ class SeedData:
 # ---------------------------------------------------------------------------
 
 
-def load_yaml(path: Path) -> Any:
+def _load_yaml(path: Path) -> Any:
     try:
         return yaml.safe_load(path.read_text(encoding="utf-8"))
     except Exception as e:
@@ -112,7 +112,7 @@ def _collect_from_dir(root: Path, key: str) -> List[dict]:
         return []
     items: List[dict] = []
     for path in sorted(root.rglob("*.yml")) + sorted(root.rglob("*.yaml")):
-        payload = load_yaml(path)
+        payload = _load_yaml(path)
         items.extend(_normalize_items(payload, key, path, root))
     return items
 
@@ -131,7 +131,7 @@ def _collect_rule_dirs(rules_dir: Path) -> tuple[list[dict], list[dict]]:
                 rule_file = candidate
                 break
         if rule_file is not None:
-            payload = load_yaml(rule_file)
+            payload = _load_yaml(rule_file)
             items = _normalize_items(payload, "rules", rule_file, rules_dir)
             for it in items:
                 if "id" not in it:
@@ -143,7 +143,7 @@ def _collect_rule_dirs(rules_dir: Path) -> tuple[list[dict], list[dict]]:
             for path in sorted(tmpl_dir.rglob("*.yml")) + sorted(
                 tmpl_dir.rglob("*.yaml")
             ):
-                payload = load_yaml(path)
+                payload = _load_yaml(path)
                 items = _normalize_items(payload, "templates", path, tmpl_dir)
                 for it in items:
                     it = _infer_template_coords(
@@ -157,7 +157,7 @@ def _collect_legacy(seed_dir: Path, name: str, key: str) -> List[dict]:
     path = seed_dir / name
     if not path.exists():
         return []
-    payload = load_yaml(path)
+    payload = _load_yaml(path)
     return _normalize_items(payload, key, path)
 
 
