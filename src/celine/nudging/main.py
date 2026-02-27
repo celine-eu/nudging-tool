@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from celine.nudging.security.auth import AuthMiddleware
 
 from celine.nudging.api.routes.webpush import router as webpush_router
+from celine.nudging.api.routes.meta import router as meta_router
 from celine.nudging.api.routes.notifications import router as notifications_router
 
 from celine.nudging.api.routes.admin import admin_routers
@@ -41,6 +42,7 @@ def create_app():
 
     app.include_router(webpush_router)
     app.include_router(notifications_router)
+    app.include_router(meta_router)
 
     for ar in admin_routers:
         app.include_router(ar, prefix="/admin", tags=["admin"])
