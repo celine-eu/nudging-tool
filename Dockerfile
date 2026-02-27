@@ -1,32 +1,54 @@
-FROM python:3.11-slim
-LABEL authors="francesco"
+# syntax=docker/dockerfile:1
 
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    UV_SYSTEM_PYTHON=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-# Install OS deps (build tools not strictly required for this set, keep lean)
+# ---- builder ---------------------------------------------------------------
+FROM base AS builder
+
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH=".venv/bin:/root/.local/bin:${PATH}"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy dependency manifests first for better caching
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml README.md uv.lock ./
+
+# Install deps only first — cached unless lock changes
+RUN uv sync --frozen --no-install-project --no-dev
+
 COPY src ./src
-RUN uv sync --no-editable
-
-# Copy application code
 COPY policies ./policies
 COPY alembic ./alembic
 COPY alembic.ini ./
 
+# Install the project itself
+RUN uv pip install --no-deps .
+
+# ---- runtime ---------------------------------------------------------------
+FROM base AS runtime
+
+RUN groupadd --gid 1000 app && \
+    useradd --uid 1000 --gid app --no-create-home app
+
+WORKDIR /app
+
+COPY --from=builder --chown=app:app /app/.venv    /app/.venv
+COPY --from=builder --chown=app:app /app/src       /app/src
+COPY --from=builder --chown=app:app /app/policies  /app/policies
+COPY --from=builder --chown=app:app /app/alembic   /app/alembic
+COPY --from=builder --chown=app:app /app/alembic.ini /app/alembic.ini
+
+ENV PATH="/app/.venv/bin:${PATH}" \
+    VIRTUAL_ENV="/app/.venv"
+
+USER app
+
 EXPOSE 8016
-CMD [".venv/bin/uvicorn", "celine.nudging.main:create_app", "--host", "0.0.0.0", "--port", "8016"]
+
+CMD ["uvicorn", "celine.nudging.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8016"]

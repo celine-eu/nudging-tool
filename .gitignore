@@ -41,3 +41,4 @@ htmlcov/
 
 # Dumpster output
 .dumpster
+skaffold

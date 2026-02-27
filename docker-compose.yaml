@@ -1,20 +1,41 @@
-services:
-  api-init:
-    build: .
-    command: .venv/bin/alembic upgrade head
+volumes:
+  pgdata:
 
+services:
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8016:8016"
     environment:
-      - SEED_DIR=/seed
-    depends_on:
-      api-init:
-        condition: service_completed_successfully
+      SEED_DIR: /app/seed
+      ORCHESTRATOR_URL: http://localhost:8016/nudging
+      # VAPID keys — generate with: nudging-cli vapid generate
+      VAPID_PUBLIC_KEY: ""
+      VAPID_PRIVATE_KEY: ""
+      VAPID_SUBJECT: "mailto:dev@celine.localhost"
     volumes:
-      - .env:/app/.env
-      - ./seed:/seed
+      - ./seed:/app/seed
+      - ./.env:/app/.env
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8016/health'').read()"',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     extra_hosts:
       - "keycloak.celine.localhost:172.17.0.1"
       - "api.celine.localhost:172.17.0.1"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["alembic", "upgrade", "head"]

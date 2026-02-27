@@ -1,0 +1,15 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: nudging
+
+build:
+  artifacts:
+    - image: ghcr.io/celine-eu/nudging
+      docker:
+        dockerfile: Dockerfile
+  local:
+    push: false
+    useDockerCLI: true
+  tagPolicy:
+    sha256: {}

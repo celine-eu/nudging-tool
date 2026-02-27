@@ -32,3 +32,5 @@ dumps:
       - pyproject.toml
       - README.md
       - .github
+      - Dockerfile
+      - docker-compose.yaml
