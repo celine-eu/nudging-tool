@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.1 (2026-03-03)
+
+### Bug Fixes
+
+- Override env
+  ([`78f4e85`](https://github.com/celine-eu/nudging-tool/commit/78f4e859cbad4a19371349d64c799afcc2b17826))
+
+
 ## v1.2.0 (2026-03-02)
 
 ### Bug Fixes
