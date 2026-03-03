@@ -467,19 +467,22 @@ async def _run_single_rule(
     lang: str,
 ) -> EngineResult:
     facts_version_str = str(facts_in.get("facts_version") or "")
+    user_id = str(evt.user_id)
+    community_id = str(evt.community_id) if evt.community_id is not None else None
 
     try:
         rule, tmpl = await _load_rule_and_template(db, rule_id, lang)
         rule, _ = await _apply_rule_override(
-            db, rule, str(evt.community_id) if evt.community_id is not None else None
+            db, rule, community_id
         )
+        rule_id_str = str(rule.id)
         if not rule.enabled:
             await _log_status(
                 db,
                 status=EngineResultStatus.NOT_TRIGGERED,
-                rule_id=str(rule.id),
-                user_id=str(evt.user_id),
-                community_id=str(evt.community_id) if evt.community_id is not None else None,
+                rule_id=rule_id_str,
+                user_id=user_id,
+                community_id=community_id,
                 scope=str(
                     facts_in.get("time")
                     or facts_in.get("date")
@@ -523,9 +526,9 @@ async def _run_single_rule(
         await _log_status(
             db,
             status=EngineResultStatus.MISSING_FACTS,
-            rule_id=str(rule.id),
-            user_id=str(evt.user_id),
-            community_id=str(evt.community_id) if evt.community_id is not None else None,
+            rule_id=rule_id_str,
+            user_id=user_id,
+            community_id=community_id,
             scope=scope,
             scenario=scenario,
             facts_version=facts_version_str,
@@ -566,7 +569,7 @@ async def _run_single_rule(
 
     nudge = NudgeEvent(
         nudge_id=uuid4().hex,
-        rule_id=str(rule.id),
+        rule_id=rule_id_str,
         family=rule.family,
         type=NudgeType(rule.type),
         severity=NudgeSeverity(rule.severity),
@@ -578,14 +581,14 @@ async def _run_single_rule(
     )
 
     # write log with dedup
-    dk = compute_dedup_key(str(rule.id), evt.user_id, evt.community_id, scope)
+    dk = compute_dedup_key(rule_id_str, evt.user_id, evt.community_id, scope)
 
     try:
         nudge_log = NudgeLog(
             id=nudge.nudge_id,
-            rule_id=str(rule.id),
+            rule_id=rule_id_str,
             user_id=nudge.user_id,
-            community_id=str(evt.community_id) if evt.community_id is not None else None,
+            community_id=community_id,
             dedup_key=dk,
             status=EngineResultStatus.CREATED.value,
             payload={
@@ -609,14 +612,17 @@ async def _run_single_rule(
         db.add(nudge_log)
         db.add(notification)
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         await db.rollback()
+        error_text = str(getattr(exc, "orig", exc))
+        if "uq_nudges_dedup_key" not in error_text:
+            raise
         await _log_status(
             db,
             status=EngineResultStatus.SUPPRESSED_DEDUP,
-            rule_id=str(rule.id),
-            user_id=str(evt.user_id),
-            community_id=str(evt.community_id) if evt.community_id is not None else None,
+            rule_id=rule_id_str,
+            user_id=user_id,
+            community_id=community_id,
             scope=scope,
             scenario=scenario,
             facts_version=facts_version_str,
@@ -632,5 +638,5 @@ async def _run_single_rule(
     return EngineResult(
         status=EngineResultStatus.CREATED,
         nudge=nudge,
-        details={"dedup_key": dk, "scenario": scenario, "rule_id": str(rule.id)},
+        details={"dedup_key": dk, "scenario": scenario, "rule_id": rule_id_str},
     )

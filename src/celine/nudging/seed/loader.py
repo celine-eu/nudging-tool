@@ -93,7 +93,7 @@ def _normalize_items(
             item = payload
             if root is not None:
                 item = _infer_template_coords(root, source, dict(payload))
-            if all(k in item for k in ("rule_id", "title_jinja", "body_jinja")):
+            if all(k in item for k in ("title_jinja", "body_jinja")):
                 return [item]
         if "user_id" in payload and key == "preferences":
             return [payload]

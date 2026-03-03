@@ -6,7 +6,7 @@ import logging
 
 from fastapi import APIRouter, Depends, status
 from pywebpush import WebPushException, webpush
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from celine.nudging.api.schemas import (
@@ -44,7 +44,12 @@ async def send_test(
         WebPushSubscription.enabled.is_(True),
     ]
     if body.community_id is not None:
-        filters.append(WebPushSubscription.community_id == body.community_id)
+        filters.append(
+            or_(
+                WebPushSubscription.community_id == body.community_id,
+                WebPushSubscription.community_id.is_(None),
+            )
+        )
 
     q = await db.execute(select(WebPushSubscription).where(*filters))
     subs = q.scalars().all()

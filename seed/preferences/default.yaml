@@ -52,3 +52,10 @@ preferences:
   max_per_day: 5
   consents:
     notifications: false
+- user_id: ah-00001
+  community_id: comm-demo
+  lang: en
+  channel_web: true
+  max_per_day: 5
+  consents:
+    notifications: true

@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
-    VAPID_SUBJECT: str = "mailto:test@celine.localhost"
+    VAPID_SUBJECT: str = "mailto:dev@example.com"
 
     # Database
     DATABASE_URL: str = (
