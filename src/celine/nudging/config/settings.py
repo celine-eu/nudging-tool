@@ -1,3 +1,4 @@
+import os
 from typing import Dict, List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,7 +19,7 @@ class Settings(BaseSettings):
 
     oidc: OidcSettings = OidcSettings(
         client_id="svc-nudging",
-        client_secret="svc-nudging",
+        client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", "svc-nudging"),
         audience="svc-nudging",
     )
     policies: PoliciesSettings = PoliciesSettings()
