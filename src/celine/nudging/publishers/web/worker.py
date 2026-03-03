@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from pywebpush import WebPushException, webpush
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from celine.nudging.db.models import DeliveryLog, WebPushSubscription
@@ -43,7 +43,12 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
         WebPushSubscription.enabled.is_(True),
     ]
     if job.community_id is not None:
-        filters.append(WebPushSubscription.community_id == job.community_id)
+        filters.append(
+            or_(
+                WebPushSubscription.community_id == job.community_id,
+                WebPushSubscription.community_id.is_(None),
+            )
+        )
 
     result = await db.execute(select(WebPushSubscription).where(*filters))
     subscriptions = list(result.scalars().all())

@@ -52,8 +52,9 @@ async def subscribe(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
+    subscription_user_id = user.get_username()
     filters = [
-        WebPushSubscription.user_id == user.sub,
+        WebPushSubscription.user_id == subscription_user_id,
         WebPushSubscription.endpoint == body.subscription.endpoint,
     ]
     if body.community_id is None:
@@ -67,7 +68,7 @@ async def subscribe(
     if row is None:
         row = WebPushSubscription(
             id=str(uuid.uuid4()),
-            user_id=user.sub,
+            user_id=subscription_user_id,
             community_id=body.community_id,
             endpoint=body.subscription.endpoint,
             p256dh=body.subscription.keys.p256dh,
@@ -98,8 +99,9 @@ async def unsubscribe(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
+    subscription_user_id = user.get_username()
     filters = [
-        WebPushSubscription.user_id == user.sub,
+        WebPushSubscription.user_id == subscription_user_id,
         WebPushSubscription.endpoint == body.endpoint,
     ]
     if body.community_id is None:

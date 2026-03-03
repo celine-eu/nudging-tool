@@ -9,7 +9,7 @@ rules:
   definition:
     kind: sunny_cons
     required_facts:
-    - period
+    - time
     - from_hour
     - to_hour
     dedup_window: daily
