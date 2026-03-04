@@ -27,13 +27,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
+def _owned_user_ids(user: JwtUser) -> list[str]:
+    """Return the stable set of user identifiers used across CELINE services."""
+    candidate_ids = [user.sub]
+
+    preferred_username = user.preferred_username
+    if preferred_username and preferred_username not in candidate_ids:
+        candidate_ids.append(preferred_username)
+
+    return candidate_ids
+
+
 async def _get_own_notification(
-    notification_id: str, user_id: str, db: AsyncSession
+    notification_id: str, user: JwtUser, db: AsyncSession
 ) -> Notification:
     result = await db.execute(
         select(Notification).where(
             Notification.id == notification_id,
-            Notification.user_id == user_id,
+            Notification.user_id.in_(_owned_user_ids(user)),
         )
     )
     n = result.scalar_one_or_none()
@@ -61,7 +72,10 @@ async def list_notifications(
 ) -> list[Notification]:
     q = (
         select(Notification)
-        .where(Notification.user_id == user.sub, Notification.deleted_at.is_(None))
+        .where(
+            Notification.user_id.in_(_owned_user_ids(user)),
+            Notification.deleted_at.is_(None),
+        )
         .order_by(Notification.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -88,7 +102,7 @@ async def mark_read(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Notification:
-    n = await _get_own_notification(notification_id, user.sub, db)
+    n = await _get_own_notification(notification_id, user, db)
 
     if n.deleted_at is not None:
         raise HTTPException(
@@ -118,7 +132,7 @@ async def soft_delete_notification(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    n = await _get_own_notification(notification_id, user.sub, db)
+    n = await _get_own_notification(notification_id, user, db)
     if n.deleted_at is None:
         n.deleted_at = datetime.now(timezone.utc)
         await db.commit()

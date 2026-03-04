@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     oidc: OidcSettings = OidcSettings(
         client_id="svc-nudging",
-        client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", "svc-nudging"),
+        client_secret="svc-nudging",
         audience="svc-nudging",
     )
     policies: PoliciesSettings = PoliciesSettings()

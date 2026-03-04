@@ -14,7 +14,7 @@
 @clientSecret = svc-digital-twin
 @communityId = example_rec
 @userId = ah-00001
-@accessToken = eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ4NXo3YWUzSGIwTEpHNnk2a2J1NGFYQkNMU0JXMVgyTE5fdkNmRFRodl9jIn0.eyJleHAiOjE3NzI1MzMyNDQsImlhdCI6MTc3MjUzMjk0NCwianRpIjoidHJydGNjOmQzN2VjYmY5LTQ4YTMtY2FjNy02MzgxLWQ2OGI4YjM5NWYzNCIsImlzcyI6Imh0dHA6Ly9rZXljbG9hay5jZWxpbmUubG9jYWxob3N0L3JlYWxtcy9jZWxpbmUiLCJhdWQiOlsic3ZjLW51ZGdpbmciLCJzdmMtcGlwZWxpbmVzIiwic3ZjLXJlYy1yZWdpc3RyeSIsInN2Yy1kYXRhc2V0LWFwaSJdLCJzdWIiOiIxNzRiMjVhNy1kNDQxLTRjMzYtOWIzMC0zNTIyZTk2ZWExMzkiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzdmMtZGlnaXRhbC10d2luIiwic2NvcGUiOiJudWRnaW5nLmluZ2VzdCBkaWdpdGFsLXR3aW4uYWRtaW4gcmVjLXJlZ2lzdHJ5Lmxvb2t1cCBwaXBlbGluZXMucnVucy5yZWFkIGRhdGFzZXQucXVlcnkifQ.em7MGk4TbrgIFHjnJ996S-7F_0853n4Q43abdoB5OE4Jzis_1ye50_T7B4Pks96Lz1YU_dZu4bCW64Fj49kUHwQSbLcXLlhp_Zt-omj1Bp4HOQewQ6JYDpLNfOWoCnIc3DZEEW657diR9fFkxBOU-cpzviIVNFirtm__laXN2EJJkYjBG4FGQAO9PS9FBYCQfc58nyVPnwrc9H6PtiuCQeRZsNW7eJK97Tw6kvKs3sOfwqFGalkRtPklg0-A_yVjGHI2nKiaYkJyny581oU4AEYwsOxiiDAkxQ2XojHs3DoFckBa_OoqKDFAhLXaACMur7zAg8bFwfWcjDh0fLqUBg
+@accessToken = !!ACCESS-TOKEN!!
 
 ### Healthcheck
 GET {{baseUrl}}/health
@@ -39,10 +39,45 @@ Authorization: Bearer {{accessToken}}
   "facts": {
     "facts_version": "1.0",
     "scenario": "imported_up",
-    "time": "2026-03-04",
+    "time": "2026-03-05",
     "delta_pct": 35,
     "cur": 135,
     "prev": 100,
-    "lang": "en"
+    "lang": "it"
+  }
+}
+
+### inverter_error_critical_daily_v1 [it]
+POST {{baseUrl}}/admin/ingest-event
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "event_type": "inverter_error_critical_daily_v1",
+  "user_id": "{{userId}}",
+  "community_id": "{{communityId}}",
+  "facts": {
+    "facts_version": "1.0",
+    "scenario": "inverter_error_critical_daily_v1",
+    "time": "2026-03-08",
+    "system_status_error_last_day_total": 2,
+    "lang": "it"
+  }
+}
+
+### spring [it]
+POST {{baseUrl}}/admin/ingest-event
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "event_type": "spring",
+  "user_id": "{{userId}}",
+  "community_id": "{{communityId}}",
+  "facts": {
+    "facts_version": "1.0",
+    "scenario": "spring",
+    "time": "2026-03-03",
+    "lang": "it"
   }
 }
