@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.2 (2026-03-06)
+
+### Bug Fixes
+
+- Release
+  ([`3282e03`](https://github.com/celine-eu/nudging-tool/commit/3282e0380179f51dae8cebd66410a239ae2d8dcc))
+
+
 ## v1.2.1 (2026-03-03)
 
 ### Bug Fixes
