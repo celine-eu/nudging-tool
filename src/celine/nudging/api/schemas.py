@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
+from pydantic import model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -15,6 +17,36 @@ from pydantic import BaseModel, Field
 
 class StatusResponse(BaseModel):
     status: str = Field(..., examples=["ok"])
+
+
+# ---------------------------------------------------------------------------
+# User preferences
+# ---------------------------------------------------------------------------
+
+
+class UserPreferenceOut(BaseModel):
+    max_per_day: int = Field(..., ge=1, le=10)
+    channel_email: bool = False
+    email: str | None = None
+
+
+class UserPreferenceUpdateIn(BaseModel):
+    max_per_day: int = Field(..., ge=1, le=10)
+    channel_email: bool | None = None
+    email: str | None = None
+
+    @model_validator(mode="after")
+    def validate_email_preferences(self) -> "UserPreferenceUpdateIn":
+        if self.channel_email is not True:
+            return self
+
+        email = (self.email or "").strip()
+        if not email:
+            raise ValueError("email is required when channel_email is enabled")
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            raise ValueError("email format is invalid")
+        self.email = email
+        return self
 
 
 # ---------------------------------------------------------------------------
