@@ -6,6 +6,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
     ports:
       - "8016:8016"
     environment:
@@ -31,11 +34,17 @@ services:
       migrate:
         condition: service_completed_successfully
     extra_hosts:
-      - "keycloak.celine.localhost:172.17.0.1"
-      - "api.celine.localhost:172.17.0.1"
+      - "host.docker.internal:host-gateway"
+      - "keycloak.celine.localhost:host-gateway"
+      - "api.celine.localhost:host-gateway"
 
   migrate:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
     command: ["alembic", "upgrade", "head"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -77,7 +77,24 @@ Authorization: Bearer {{accessToken}}
   "facts": {
     "facts_version": "1.0",
     "scenario": "spring",
-    "time": "2026-03-03",
+    "time": "2026",
+    "lang": "it"
+  }
+}
+
+### summer [it]
+POST {{baseUrl}}/admin/ingest-event
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "event_type": "summmer",
+  "user_id": "{{userId}}",
+  "community_id": "{{communityId}}",
+  "facts": {
+    "facts_version": "1.0",
+    "scenario": "spring",
+    "time": "2026",
     "lang": "it"
   }
 }
