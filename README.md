@@ -51,10 +51,10 @@ hypercorn api.main:app --bind 0.0.0.0:8000
 
 | Document | Description |
 |---|---|
-| [Architecture](https://celine-eu.github.io/projects/nudging-tool/docs/architecture.md) | Event flow, engine/orchestrator/publisher components, database models |
-| [Engine](https://celine-eu.github.io/projects/nudging-tool/docs/engine.md) | Rule evaluation, NudgeType/Severity, Jinja2 templates, dedup scopes, YAML seed format |
-| [API Reference](https://celine-eu.github.io/projects/nudging-tool/docs/api-reference.md) | All endpoints: ingest-event, webpush, notifications, preferences |
-| [Development](https://celine-eu.github.io/projects/nudging-tool/docs/development.md) | Local setup, VAPID key generation, seed management, running tests |
+| [Architecture](https://celine-eu.github.io/projects/nudging-tool/docs/architecture) | Event flow, engine/orchestrator/publisher components, database models |
+| [Engine](https://celine-eu.github.io/projects/nudging-tool/docs/engine) | Rule evaluation, NudgeType/Severity, Jinja2 templates, dedup scopes, YAML seed format |
+| [API Reference](https://celine-eu.github.io/projects/nudging-tool/docs/api-reference) | All endpoints: ingest-event, webpush, notifications, preferences |
+| [Development](https://celine-eu.github.io/projects/nudging-tool/docs/development) | Local setup, VAPID key generation, seed management, running tests |
 
 ## License
 
