@@ -1,4 +1,4 @@
-# nudging-tool
+# CELINE Nudging Tool
 
 Backend service that transforms Digital Twin events into personalized push notifications for renewable energy community participants.
 
