@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = (
-        "postgresql+asyncpg://postgres:securepassword123@172.17.0.1:15432/nudging"
+        "postgresql+asyncpg://postgres:securepassword123@host.docker.internal:15432/nudging"
     )
 
     # General
