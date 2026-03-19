@@ -1,0 +1,20 @@
+rules:
+- id: flexibility_opportunity
+  name: Solar flexibility opportunity
+  enabled: true
+  family: energy
+  type: alert
+  severity: info
+  version: 1
+  definition:
+    kind: extr_event
+    required_facts:
+    - window_start
+    - window_end
+    - estimated_kwh
+    - reward_points
+    - period
+    dedup_window: daily
+    scenarios:
+    - flexibility_opportunity
+    evaluator_path: evaluate.py

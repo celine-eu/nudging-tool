@@ -1,0 +1,5 @@
+title_jinja: "Opportunità solare: {{ window_start }}–{{ window_end }}"
+body_jinja: |
+  La comunità avrà energia solare in eccesso tra le {{ window_start }} e le {{ window_end }}.
+  Sposta i tuoi carichi ora e guadagna {{ reward_points }} punti!
+cta_url: /suggestions
