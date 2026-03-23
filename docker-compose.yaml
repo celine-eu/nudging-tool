@@ -15,9 +15,9 @@ services:
       SEED_DIR: /app/seed
       ORCHESTRATOR_URL: http://localhost:8016/nudging
       # VAPID keys — generate with: nudging-cli vapid generate
-      VAPID_PUBLIC_KEY: ""
-      VAPID_PRIVATE_KEY: ""
-      VAPID_SUBJECT: "mailto:dev@celine.localhost"
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:dev@celine.localhost}
     volumes:
       - ./seed:/app/seed
       - ./.env:/app/.env
