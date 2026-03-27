@@ -209,6 +209,8 @@ KNOWN_KINDS = {
     "sunny_pros",
     "sunny_cons",
     "extr_event",
+    "meter_anomaly",
+    "flexibility_opportunity"
     "kpi_conditions",
 }
 

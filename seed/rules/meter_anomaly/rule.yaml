@@ -1,0 +1,17 @@
+rules:
+- id: meter_anomaly
+  name: Smart meter anomaly
+  enabled: true
+  family: system
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: meter_anomaly
+    required_facts:
+    - time
+    - device_name
+    dedup_window: daily
+    scenarios:
+    - meter_anomaly
+    evaluator_path: evaluate.py

@@ -1,0 +1,5 @@
+title_jinja: Smart meter anomaly
+body_jinja: |
+  Alert!
+  The smart meter "{{ device_name }}" is not sending data correctly.
+  Check the details in the app and contact support if the issue persists.
