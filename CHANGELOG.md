@@ -2,6 +2,33 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-04-03)
+
+### Bug Fixes
+
+- New event
+  ([`48f6713`](https://github.com/celine-eu/nudging-tool/commit/48f6713637cd1998720b8ef24f079c0413f26f9e))
+
+- Vapidkey
+  ([`2d72b7c`](https://github.com/celine-eu/nudging-tool/commit/2d72b7cff7fd631f0dccc43ba67768c13cc7ed26))
+
+### Chores
+
+- Add flexibility_opportunity placeholder rule
+  ([`fc24e6d`](https://github.com/celine-eu/nudging-tool/commit/fc24e6d426357d85cce58a084f7613a5cf033b72))
+
+- Upgrade celine-sdk to 1.4.3
+  ([`f77ed87`](https://github.com/celine-eu/nudging-tool/commit/f77ed873ee9b8a761275a60223ce4d1504df260a))
+
+- Upgrade celine-sdk to 1.5.0
+  ([`5b3c483`](https://github.com/celine-eu/nudging-tool/commit/5b3c483e723c2350880abea6046573fbafe355cd))
+
+### Features
+
+- Add flexibility rules stub
+  ([`2e1506e`](https://github.com/celine-eu/nudging-tool/commit/2e1506e8c799dc6a9a20374d502361dae7fab052))
+
+
 ## v1.2.2 (2026-03-06)
 
 ### Bug Fixes
