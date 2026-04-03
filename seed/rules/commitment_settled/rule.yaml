@@ -1,0 +1,19 @@
+rules:
+- id: commitment_settled
+  name: Flexibility commitment settled
+  enabled: true
+  family: energy
+  type: alert
+  severity: info
+  version: 1
+  definition:
+    kind: extr_event
+    required_facts:
+    - commitment_id
+    - actual_kwh
+    - reward_points_actual
+    - period
+    dedup_window: once
+    scenarios:
+    - commitment_settled
+    evaluator_path: evaluate.py

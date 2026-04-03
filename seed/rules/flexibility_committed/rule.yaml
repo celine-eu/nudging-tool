@@ -1,0 +1,19 @@
+rules:
+- id: flexibility_committed
+  name: Flexibility commitment confirmed
+  enabled: true
+  family: energy
+  type: alert
+  severity: info
+  version: 1
+  definition:
+    kind: extr_event
+    required_facts:
+    - window_start
+    - window_end
+    - reward_points_estimated
+    - period
+    dedup_window: daily
+    scenarios:
+    - flexibility_committed
+    evaluator_path: evaluate.py

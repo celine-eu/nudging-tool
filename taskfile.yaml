@@ -5,6 +5,11 @@ tasks:
     cmds:
       - uv sync
 
+  run:
+    desc: "Run development server"
+    cmds:
+      - .venv/bin/uvicorn celine.nudging.main:create_app --reload --host 0.0.0.0 --port 8016
+
   debug:
     desc: "Run development server with debugger"
     cmds:

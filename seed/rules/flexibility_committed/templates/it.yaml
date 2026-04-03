@@ -1,0 +1,5 @@
+title_jinja: "Impegno di flessibilità: {{ window_start }}–{{ window_end }}"
+body_jinja: |
+  Il tuo impegno a spostare i carichi tra le {{ window_start }} e le {{ window_end }} è registrato.
+  Ricompensa stimata: {{ reward_points_estimated }} punti. Confermeremo una volta elaborati i dati.
+cta_url: /gamification

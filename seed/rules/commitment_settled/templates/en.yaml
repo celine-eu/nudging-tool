@@ -1,0 +1,5 @@
+title_jinja: "Your load shift is confirmed! +{{ reward_points_actual }} pts"
+body_jinja: |
+  Great job! You consumed {{ actual_kwh }} kWh of community solar energy on {{ period }}.
+  {{ reward_points_actual }} points have been added to your account.
+cta_url: /gamification
