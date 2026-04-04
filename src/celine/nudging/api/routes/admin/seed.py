@@ -85,11 +85,8 @@ async def seed_apply(
     await db.commit()
 
     logger.info(
-        "Seed applied: %d rules, %d templates, %d preferences",
-        len(body.rules),
-        len(body.templates),
-        len(body.preferences),
-        len(body.overrides),
+        f"Seed applied: {len(body.rules)} rules, {len(body.templates)} templates, {len(body.preferences)} preferences",
+        # len(body.overrides),
     )
 
     return SeedApplyResponse(

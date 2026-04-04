@@ -40,3 +40,8 @@ tasks:
     desc: "Reset DB schema"
     cmds:
       - uv run alembic downgrade base
+
+  seed:
+    desc: "Seed nudging rules"
+    cmds:
+      - .venv/bin/nudging-cli seed apply ./seed --client-id celine-cli --client-secret celine-cli

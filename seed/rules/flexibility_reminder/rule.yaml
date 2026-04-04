@@ -1,6 +1,6 @@
 rules:
-- id: commitment_settled
-  name: Flexibility commitment settled
+- id: flexibility_reminder
+  name: Flexibility reminder
   enabled: true
   family: energy
   type: alert
@@ -9,11 +9,11 @@ rules:
   definition:
     kind: extr_event
     required_facts:
-    - commitment_id
-    - actual_kwh
-    - reward_points_actual
+    - window_start
+    - window_end
+    - reward_points_estimated
     - period
     dedup_window: daily
     scenarios:
-    - commitment_settled
+    - flexibility_reminder
     evaluator_path: evaluate.py

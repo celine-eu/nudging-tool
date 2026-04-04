@@ -13,7 +13,7 @@ rules:
     - cost_last_month_total_ratio
     conditions:
     - fact_key: cost_last_month_total_ratio
-      op: >
+      op: ">"
       value: 1.15
     scenarios:
     - bill_up_monthly_v1

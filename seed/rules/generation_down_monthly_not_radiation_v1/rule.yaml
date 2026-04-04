@@ -14,10 +14,10 @@ rules:
     - radiation_ghi_last_month_avg_ratio
     conditions:
     - fact_key: energy_generation_last_month_avg_ratio
-      op: <
+      op: "<"
       value: 0.75
     - fact_key: radiation_ghi_last_month_avg_ratio
-      op: >
+      op: ">"
       value: 0.95
     logic: AND
     scenarios:

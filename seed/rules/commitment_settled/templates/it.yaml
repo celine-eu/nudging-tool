@@ -2,4 +2,3 @@ title_jinja: "Il tuo spostamento è confermato! +{{ reward_points_actual }} pt"
 body_jinja: |
   Ottimo lavoro! Hai consumato {{ actual_kwh }} kWh di energia solare comunitaria il {{ period }}.
   {{ reward_points_actual }} punti sono stati aggiunti al tuo account.
-cta_url: /gamification

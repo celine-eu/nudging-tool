@@ -210,7 +210,7 @@ KNOWN_KINDS = {
     "sunny_cons",
     "extr_event",
     "meter_anomaly",
-    "flexibility_opportunity"
+    "flexibility_opportunity",
     "kpi_conditions",
 }
 
@@ -265,6 +265,7 @@ def validate_rule_definition(defn: Dict[str, Any]) -> List[str]:
         logger.warning(
             "Unknown rule kind '%s' - allowing but skipping strict validation", kind
         )
+        return errors
 
     _validate_required_facts(defn, errors)
     _validate_scenarios(defn, errors)

@@ -12,6 +12,10 @@ rules:
     - system_status_error_last_day_total
     dedup_window: daily
     threshold_error_number: 1
+    conditions:
+    - fact_key: system_status_error_last_day_total
+      op: ">="
+      value: 1
     scenarios:
     - inverter_error_critical_daily_v1
     evaluator_path: evaluate.py

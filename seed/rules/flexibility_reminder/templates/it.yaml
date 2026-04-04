@@ -1,0 +1,4 @@
+title_jinja: "Surplus solare ora — guadagna {{ reward_points_estimated }} pt!"
+body_jinja: |
+  Il surplus solare comunitario è disponibile {{ window_start }}–{{ window_end }}.
+  Avvia il bucato, la lavastoviglie o ricarica i dispositivi — guadagna fino a {{ reward_points_estimated }} punti!

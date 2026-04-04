@@ -13,7 +13,7 @@ rules:
     - price_last_week_avg_ratio
     conditions:
     - fact_key: price_last_week_avg_ratio
-      op: >
+      op: ">"
       value: 1.25
     scenarios:
     - price_up_weekly_v1

@@ -1,0 +1,4 @@
+title_jinja: "Solar surplus now — earn {{ reward_points_estimated }} pts!"
+body_jinja: |
+  Community solar surplus is available {{ window_start }}–{{ window_end }}.
+  Start your laundry, dishwasher, or charge your devices — earn up to {{ reward_points_estimated }} points!

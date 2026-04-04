@@ -16,16 +16,16 @@ rules:
     - price_last_month_avg_ratio
     conditions:
     - fact_key: cost_last_month_total_ratio
-      op: >
+      op: ">"
       value: 1.15
     - fact_key: radiation_ghi_last_month_avg_ratio
-      op: <
+      op: "<"
       value: 0.99
     - fact_key: energy_selfcons_last_month_avg_ratio
-      op: >
+      op: ">"
       value: 0.99
     - fact_key: price_last_month_avg_ratio
-      op: <
+      op: "<"
       value: 1.01
     logic: AND
     scenarios:

@@ -2,4 +2,3 @@ title_jinja: "Solar opportunity: {{ window_start }}–{{ window_end }}"
 body_jinja: |
   The community will have excess solar energy between {{ window_start }} and {{ window_end }}.
   Shift your loads now and earn {{ reward_points }} points!
-cta_url: /suggestions
