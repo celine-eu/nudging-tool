@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-04-07)
+
+### Chores
+
+- Upgrade celine-sdk to 1.6.0
+  ([`d7f5cc2`](https://github.com/celine-eu/nudging-tool/commit/d7f5cc246062dede5c4c55407a4fe18405f75ebb))
+
+### Features
+
+- Review seeds errors, add flexibility reminder
+  ([`dfdaf80`](https://github.com/celine-eu/nudging-tool/commit/dfdaf80066dfe4855b0cdf6adb362645c2aa65c4))
+
+
 ## v1.3.0 (2026-04-03)
 
 ### Bug Fixes
