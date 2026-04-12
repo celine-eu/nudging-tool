@@ -212,6 +212,8 @@ KNOWN_KINDS = {
     "meter_anomaly",
     "flexibility_opportunity",
     "kpi_conditions",
+    "commitment_settled",
+    "flexibility_committed"
 }
 
 
