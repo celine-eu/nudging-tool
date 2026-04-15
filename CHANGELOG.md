@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-04-15)
+
+### Chores
+
+- Updarte ref
+  ([`c232886`](https://github.com/celine-eu/nudging-tool/commit/c2328869b9a922f56c3cb7739ddc267ad90fb47e))
+
+- Upgrade celine-sdk to 1.7.0
+  ([`c7e5b1e`](https://github.com/celine-eu/nudging-tool/commit/c7e5b1e722d4d0279979208aa822a2e93b590368))
+
+- Upgrade celine-sdk to 1.8.0
+  ([`7501d62`](https://github.com/celine-eu/nudging-tool/commit/7501d625b2cb7435056333f741f7197063f03bb0))
+
+### Features
+
+- Add the notification via mail
+  ([`e7cd10b`](https://github.com/celine-eu/nudging-tool/commit/e7cd10b1cc5b9e7b71b5c7d4013a23ff1efa45ea))
+
+- Added new notifications
+  ([`676df3a`](https://github.com/celine-eu/nudging-tool/commit/676df3a02a8fb9a81c85fc3c723b1107157b8c6d))
+
+
 ## v1.4.0 (2026-04-07)
 
 ### Chores
