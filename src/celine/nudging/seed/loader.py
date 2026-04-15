@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Tuple
 import yaml
 
 from celine.nudging.seed.schema import (
+    ActiveKindSeed,
     PreferenceSeed,
     RuleOverrideSeed,
     RuleSeed,
@@ -23,6 +24,7 @@ class SeedData:
     templates: List[dict]
     preferences: List[dict]
     overrides: List[dict]
+    active_kinds: List[dict]
 
 
 # ---------------------------------------------------------------------------
@@ -161,11 +163,95 @@ def _collect_legacy(seed_dir: Path, name: str, key: str) -> List[dict]:
     return _normalize_items(payload, key, path)
 
 
+KNOWN_KINDS: set[str] = set()
+SUPPORTED_ACTIVE_KIND_LANGS = ("it", "en", "es")
+
+
+def _normalize_active_kinds(payload: Any, source: Path) -> List[dict]:
+    if payload is None:
+        raise ValueError(f"Invalid active kinds structure in {source}: payload is empty")
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict) and isinstance(payload.get("active_kinds"), list):
+        items = payload["active_kinds"]
+    else:
+        raise ValueError(
+            f"Invalid active kinds structure in {source}: expected a list or "
+            "{active_kinds: [...]}"
+        )
+
+    normalized: List[dict] = []
+    seen: set[str] = set()
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"Invalid active kind entry at index {idx} in {source}: expected object"
+            )
+        try:
+            obj = ActiveKindSeed.model_validate(item)
+        except Exception as exc:
+            raise ValueError(f"Invalid active kind entry at index {idx} in {source}: {exc}") from exc
+
+        kind = obj.kind.strip()
+        if kind in seen:
+            continue
+        seen.add(kind)
+        normalized.append(obj.model_dump(exclude_none=True))
+    return normalized
+
+
+def _load_active_kinds(seed_dir: Path) -> List[dict]:
+    for name in ("active_kinds.yaml", "active_kinds.yml"):
+        path = seed_dir / name
+        if not path.exists():
+            continue
+        return _normalize_active_kinds(_load_yaml(path), path)
+    raise ValueError(
+        f"Missing active kinds file in {seed_dir}: expected active_kinds.yaml or "
+        "active_kinds.yml"
+    )
+
+
+def _sync_known_kinds(active_kinds: List[dict]) -> None:
+    KNOWN_KINDS.clear()
+    KNOWN_KINDS.update(item["kind"] for item in active_kinds)
+
+
+def _validate_i18n_map(value: Any, field_name: str, errors: List[str]) -> None:
+    if not isinstance(value, dict):
+        errors.append(f"{field_name} must be an object with keys {SUPPORTED_ACTIVE_KIND_LANGS}")
+        return
+    for lang in SUPPORTED_ACTIVE_KIND_LANGS:
+        text = value.get(lang)
+        if not isinstance(text, str) or not text.strip():
+            errors.append(f"{field_name}.{lang} is required")
+
+
+def _resolve_i18n_text(value: dict[str, str], lang: str) -> str:
+    normalized = (lang or "en").strip().lower()
+    return value.get(normalized) or value.get("en") or next(iter(value.values()))
+
+
+def localize_active_kinds(active_kinds: List[dict], lang: str) -> List[dict]:
+    localized: List[dict] = []
+    for item in active_kinds:
+        localized.append(
+            {
+                **item,
+                "label": _resolve_i18n_text(item["label"], lang),
+                "description": _resolve_i18n_text(item["description"], lang),
+                "cadence": _resolve_i18n_text(item["cadence"], lang),
+            }
+        )
+    return localized
+
+
 def load_seed_dir(seed_dir: Path) -> SeedData:
     rules_dir = seed_dir / "rules"
     templates_dir = seed_dir / "templates"
     preferences_dir = seed_dir / "preferences"
     overrides_dir = seed_dir / "overrides"
+    active_kinds = _load_active_kinds(seed_dir)
 
     rules, templates = _collect_rule_dirs(rules_dir)
 
@@ -188,33 +274,20 @@ def load_seed_dir(seed_dir: Path) -> SeedData:
     if not overrides and not overrides_dir.exists():
         overrides = _collect_legacy(seed_dir, "overrides.yaml", "overrides")
 
+    _sync_known_kinds(active_kinds)
+
     return SeedData(
         rules=rules,
         templates=templates,
         preferences=preferences,
         overrides=overrides,
+        active_kinds=active_kinds,
     )
 
 
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
-
-KNOWN_KINDS = {
-    "static_message",
-    "imported_up",
-    "imported_down",
-    "price_up",
-    "price_down",
-    "sunny_pros",
-    "sunny_cons",
-    "extr_event",
-    "meter_anomaly",
-    "flexibility_opportunity",
-    "kpi_conditions",
-    "commitment_settled",
-    "flexibility_committed"
-}
 
 
 def _validate_required_facts(defn: Dict[str, Any], errors: List[str]) -> None:
@@ -285,6 +358,26 @@ def validate_rule_definition(defn: Dict[str, Any]) -> List[str]:
 
 def validate_seed(seed: SeedData) -> Tuple[SeedData, List[str]]:
     errors: List[str] = []
+    active_kinds_out: List[dict] = []
+
+    seen_kinds: set[str] = set()
+    for idx, item in enumerate(seed.active_kinds):
+        try:
+            obj = ActiveKindSeed.model_validate(item)
+        except Exception as e:
+            errors.append(f"active_kinds[{idx}]: {e}")
+            continue
+        normalized = obj.kind.strip()
+        if normalized in seen_kinds:
+            errors.append(f"active_kinds[{idx}] duplicates '{normalized}'")
+            continue
+        _validate_i18n_map(obj.label, f"active_kinds[{idx}].label", errors)
+        _validate_i18n_map(
+            obj.description, f"active_kinds[{idx}].description", errors
+        )
+        _validate_i18n_map(obj.cadence, f"active_kinds[{idx}].cadence", errors)
+        seen_kinds.add(normalized)
+        active_kinds_out.append(obj.model_dump(exclude_none=True))
 
     rules_out: List[dict] = []
     for idx, r in enumerate(seed.rules):
@@ -330,6 +423,7 @@ def validate_seed(seed: SeedData) -> Tuple[SeedData, List[str]]:
             templates=templates_out,
             preferences=prefs_out,
             overrides=overrides_out,
+            active_kinds=active_kinds_out or list(seed.active_kinds),
         ),
         errors,
     )

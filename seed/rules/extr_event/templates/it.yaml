@@ -1,5 +1,5 @@
 title_jinja: Avviso!
 body_jinja: |
   Avviso!
-  {{ day_label }}, tra le {{ window_start }} e le {{ window_end }}, è previsto un evento meteorologico estremo {{ event }}.
+  {{ day_label }}, tra le {{ window_start }} e le {{ window_end }}, è previsto un evento meteorologico estremo {{ event_type }}.
   Se possibile, cerca di programmare i tuoi consumi energetici al di fuori di questa fascia oraria per contribuire a ridurre lo stress sulla rete elettrica.

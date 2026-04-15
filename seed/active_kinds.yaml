@@ -1,0 +1,49 @@
+active_kinds:
+  - kind: flexibility_opportunity
+    label:
+      it: Opportunità di flessibilità
+      en: Flexibility opportunities
+      es: Oportunidades de flexibilidad
+    description:
+      it: Notifiche su finestre temporali in cui spostare i carichi permette di usare surplus solare e ottenere premi.
+      en: Notifications about time windows where shifting loads can use excess solar energy and earn rewards.
+      es: Notificaciones sobre franjas horarias en las que desplazar cargas permite usar excedente solar y obtener recompensas.
+    cadence:
+      it: Al massimo una volta al giorno quando è disponibile un'opportunità.
+      en: At most once per day when an opportunity is available.
+      es: Como máximo una vez al día cuando hay una oportunidad disponible.
+    rule_ids:
+      - flexibility_opportunity
+      - flexibility_reminder
+  - kind: meter_anomaly
+    label:
+      it: Anomalie di sensori e contatori
+      en: Sensor and meter anomalies
+      es: Anomalías de sensores y contadores
+    description:
+      it: Avvisi quando un sensore o uno smart meter sembrano non inviare correttamente i dati o presentano comportamenti anomali.
+      en: Alerts when a sensor or smart meter appears to stop sending data correctly or behaves abnormally.
+      es: Avisos cuando un sensor o un contador inteligente parecen dejar de enviar datos correctamente o muestran un comportamiento anómalo.
+    cadence:
+      it: Al massimo una volta al giorno finché l'anomalia è presente.
+      en: At most once per day while the anomaly is detected.
+      es: Como máximo una vez al día mientras se detecte la anomalía.
+    rule_ids:
+      - meter_anomaly
+      - sensor_not_working
+  - kind: extr_event
+    label:
+      it: Allerte meteo
+      en: Weather alerts
+      es: Alertas meteorológicas
+    description:
+      it: Avvisi di protezione civile o meteo rilevanti per la comunità energetica.
+      en: Civil protection or weather alerts relevant to the energy community.
+      es: Avisos de protección civil o meteorológicos relevantes para la comunidad energética.
+    cadence:
+      it: Inviate quando viene pubblicata un'allerta rilevante.
+      en: Sent whenever a relevant alert is issued.
+      es: Se envían cuando se publica una alerta relevante.
+    editable: false
+    rule_ids:
+      - extr_event

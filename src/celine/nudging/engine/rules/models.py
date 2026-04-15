@@ -22,7 +22,7 @@ class NudgeSeverity(str, Enum):
 class DigitalTwinEvent(BaseModel):
     event_type: str
     timestamp: datetime = Field(default_factory=utc_now)
-    user_id: str
+    user_id: str | None = None
     community_id: str | None = None
 
     # raw refs, optional

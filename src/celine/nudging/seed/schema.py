@@ -61,6 +61,17 @@ class PreferenceSeed(BaseModel):
     consents: Dict[str, Any] = Field(default_factory=dict)
 
 
+class ActiveKindSeed(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str
+    label: Dict[str, str]
+    description: Dict[str, str]
+    cadence: Dict[str, str]
+    editable: bool = True
+    rule_ids: List[str] = Field(default_factory=list)
+
+
 class RuleOverrideSeed(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

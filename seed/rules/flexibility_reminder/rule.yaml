@@ -7,7 +7,7 @@ rules:
   severity: info
   version: 1
   definition:
-    kind: extr_event
+    kind: flexibility_opportunity
     required_facts:
     - window_start
     - window_end

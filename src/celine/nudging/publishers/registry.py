@@ -4,9 +4,11 @@ from typing import Dict
 
 from celine.nudging.orchestrator.models import Channel
 from celine.nudging.publishers.base import Publisher
+from celine.nudging.publishers.email.worker import EmailPublisher
 from celine.nudging.publishers.web.worker import WebPublisher
 
 _PUBLISHERS: Dict[Channel, Publisher] = {
+    Channel.email: EmailPublisher(),
     Channel.web: WebPublisher(),
 }
 

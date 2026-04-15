@@ -1,0 +1,5 @@
+title_jinja: Anomalia del contador inteligente
+body_jinja: |
+  ¡Alerta!
+  El contador inteligente "{{ device_name }}" no está enviando datos correctamente.
+  Consulta los detalles en la app y contacta con soporte si el problema persiste.

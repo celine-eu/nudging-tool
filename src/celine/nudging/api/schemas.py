@@ -28,12 +28,14 @@ class UserPreferenceOut(BaseModel):
     max_per_day: int = Field(..., ge=1, le=10)
     channel_email: bool = False
     email: str | None = None
+    enabled_notification_kinds: list[str] = Field(default_factory=list)
 
 
 class UserPreferenceUpdateIn(BaseModel):
     max_per_day: int = Field(..., ge=1, le=10)
     channel_email: bool | None = None
     email: str | None = None
+    enabled_notification_kinds: list[str] | None = None
 
     @model_validator(mode="after")
     def validate_email_preferences(self) -> "UserPreferenceUpdateIn":
@@ -47,6 +49,15 @@ class UserPreferenceUpdateIn(BaseModel):
             raise ValueError("email format is invalid")
         self.email = email
         return self
+
+
+class NotificationKindPreferenceOut(BaseModel):
+    kind: str
+    label: str
+    description: str
+    cadence: str
+    enabled: bool
+    editable: bool = True
 
 
 # ---------------------------------------------------------------------------

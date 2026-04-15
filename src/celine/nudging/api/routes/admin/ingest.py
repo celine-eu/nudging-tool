@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
@@ -23,6 +25,35 @@ from celine.nudging.orchestrator.orchestrator import orchestrate
 router = APIRouter(tags=["admin"])
 
 logger = logging.getLogger(__name__)
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _extract_email_recipients(facts: dict) -> list[str]:
+    raw = facts.get("email_recipients")
+    if not isinstance(raw, list):
+        return []
+
+    recipients: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        email = item.strip()
+        if not email or not _EMAIL_RE.match(email):
+            continue
+        key = email.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        recipients.append(email)
+    return recipients
+
+
+def _synthetic_user_id(email_recipients: list[str]) -> str:
+    digest = hashlib.sha256(
+        "|".join(sorted(email.lower() for email in email_recipients)).encode("utf-8")
+    ).hexdigest()[:16]
+    return f"email-ingest:{digest}"
 
 
 @router.post(
@@ -70,6 +101,23 @@ async def ingest_event(
                 "error": "invalid_facts_contract",
                 "errors": contract.errors,
             },
+        )
+
+    if not evt.user_id:
+        email_recipients = _extract_email_recipients(facts)
+        if not email_recipients:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "error": "missing_target",
+                    "reason": "user_id_or_email_recipients_required",
+                },
+            )
+        evt = evt.model_copy(
+            update={
+                "user_id": _synthetic_user_id(email_recipients),
+                "community_id": None,
+            }
         )
 
     # --- run engine (BATCH) ---

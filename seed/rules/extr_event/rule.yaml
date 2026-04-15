@@ -9,9 +9,9 @@ rules:
   definition:
     kind: extr_event
     required_facts:
-    - time
-    - from_hour
-    - to_hour
+    - period
+    - window_start
+    - window_end
     - event_type
     dedup_window: daily
     scenarios:
