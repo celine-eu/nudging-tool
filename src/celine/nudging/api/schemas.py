@@ -160,6 +160,29 @@ class IngestErrorDetail(BaseModel):
     results: list[EngineResultOut] | None = None
 
 
+class ScheduledEventCreateRequest(BaseModel):
+    event_type: str
+    user_id: str
+    community_id: str | None = None
+    external_key: str | None = None
+    trigger_at: datetime
+    facts: dict[str, Any] = Field(default_factory=dict)
+
+
+class ScheduledEventOut(BaseModel):
+    id: str
+    event_type: str
+    user_id: str
+    community_id: str | None = None
+    external_key: str | None = None
+    trigger_at: datetime
+    status: str
+    created_at: datetime
+    dispatched_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
 # ---------------------------------------------------------------------------
 # WebPush
 # ---------------------------------------------------------------------------

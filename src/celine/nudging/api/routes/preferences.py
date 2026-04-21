@@ -24,9 +24,6 @@ _ENABLED_KINDS_KEY = "enabled_notification_kinds"
 
 
 def _canonical_user_id(user: JwtUser) -> str:
-    preferred_username = user.preferred_username
-    if preferred_username and preferred_username.strip():
-        return preferred_username.strip()
     return user.sub
 
 

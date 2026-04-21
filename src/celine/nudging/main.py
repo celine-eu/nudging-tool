@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 import os
 from pathlib import Path
@@ -16,6 +17,7 @@ from celine.nudging.api.routes.preferences import router as preferences_router
 
 from celine.nudging.api.routes.admin import admin_routers
 from celine.nudging.db.auto_seed import auto_seed
+from celine.nudging.scheduler import run_scheduler
 from celine.nudging.security.policies import init_policy_engine
 
 
@@ -24,8 +26,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan: initialise policies and optionally seed the DB."""
     init_policy_engine()
     await auto_seed()
+    stop_event = asyncio.Event()
+    scheduler_task = asyncio.create_task(run_scheduler(stop_event))
     yield
-    # (teardown goes here if needed)
+    stop_event.set()
+    await scheduler_task
 
 
 def create_app():

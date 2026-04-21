@@ -24,6 +24,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webpush", tags=["webpush"])
 
 
+def _canonical_user_id(user: JwtUser) -> str:
+    return user.sub
+
+
+def _owned_user_ids(user: JwtUser) -> list[str]:
+    candidate_ids = [user.sub]
+    preferred_username = user.preferred_username
+    if preferred_username and preferred_username not in candidate_ids:
+        candidate_ids.append(preferred_username)
+    return candidate_ids
+
+
 @router.get(
     "/vapid-public-key",
     response_model=VapidPublicKeyResponse,
@@ -52,9 +64,9 @@ async def subscribe(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
-    subscription_user_id = user.get_username()
+    subscription_user_id = _canonical_user_id(user)
     filters = [
-        WebPushSubscription.user_id == subscription_user_id,
+        WebPushSubscription.user_id.in_(_owned_user_ids(user)),
         WebPushSubscription.endpoint == body.subscription.endpoint,
     ]
     if body.community_id is None:
@@ -77,6 +89,7 @@ async def subscribe(
         )
         db.add(row)
     else:
+        row.user_id = subscription_user_id
         row.p256dh = body.subscription.keys.p256dh
         row.auth = body.subscription.keys.auth
         row.enabled = True
@@ -99,9 +112,8 @@ async def unsubscribe(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
-    subscription_user_id = user.get_username()
     filters = [
-        WebPushSubscription.user_id == subscription_user_id,
+        WebPushSubscription.user_id.in_(_owned_user_ids(user)),
         WebPushSubscription.endpoint == body.endpoint,
     ]
     if body.community_id is None:

@@ -47,6 +47,7 @@ class Settings(BaseSettings):
 
     # Rate limiting defaults
     MAX_PER_DAY_DEFAULT: int = 3
+    SCHEDULER_POLL_SECONDS: float = 30.0
 
     # Scenario → Rules mapping (legacy fallback). Prefer rule.definition.scenarios.
     SCENARIO_TO_RULE_IDS: Dict[str, List[str]] = {}

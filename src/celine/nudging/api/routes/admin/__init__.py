@@ -1,11 +1,13 @@
 from celine.nudging.api.routes.admin.ingest import router as ingest
 from celine.nudging.api.routes.admin.notifications import router as notifications
+from celine.nudging.api.routes.admin.scheduled_events import router as scheduled_events
 from celine.nudging.api.routes.admin.seed import router as seed
 from celine.nudging.api.routes.admin.webpush import router as webpush
 
 admin_routers = [
     ingest,
     notifications,
+    scheduled_events,
     seed,
     webpush,
 ]
