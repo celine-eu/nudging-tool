@@ -18,6 +18,7 @@ Scheduled events follow the same pipeline but are triggered by the background sc
 ### Engine
 
 The engine receives an event and:
+
 1. Resolves matching rules by `rule_id` or event scenario
 2. Loads each rule's custom Python evaluator from the seed directory
 3. Evaluates whether the rule should fire given the event payload

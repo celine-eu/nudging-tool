@@ -5,6 +5,7 @@ The engine is the core rule evaluation component. It maps incoming events to not
 ## Rule Evaluation
 
 For each incoming event:
+
 1. The engine resolves matching rules by `rule_id` list or event scenario mapping
 2. Each rule's custom Python evaluator is loaded from `seed/rules/<rule_id>/evaluate.py`
 3. The evaluator decides whether the rule should fire given the event payload
