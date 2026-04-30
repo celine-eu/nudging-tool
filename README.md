@@ -1,60 +1,78 @@
 # CELINE Nudging Tool
 
-Backend service that transforms Digital Twin events into personalized push notifications for renewable energy community participants.
+Notification service for the CELINE platform. Receives events from other services, evaluates rules with custom Python evaluators, renders templated messages, and delivers notifications via web push or email. Handles deduplication, frequency limiting, user preferences, and scheduled delivery.
 
 ## Event Flow
 
 ```
-DigitalTwinEvent -> Engine -> Orchestrator -> Publisher (web push)
+Event -> Engine -> Orchestrator -> Publisher (web push / email)
+                                      |
+Scheduler -> ScheduledEvent ----------+
 ```
 
-1. **Engine** — evaluates rules against the incoming event, selects matching nudge type and severity, renders a Jinja2 message template
-2. **Orchestrator** — applies delivery policies (suppression, deduplication, frequency limits, user preferences)
-3. **Publisher** — sends the notification via the registered delivery channel (currently: `web` via VAPID web push)
+1. **Engine** — evaluates rules using per-rule Python evaluators, selects matching rules, renders Jinja2 message templates per channel and language
+2. **Orchestrator** — applies delivery policies (suppression, deduplication, frequency limits, user preferences, per-community overrides)
+3. **Publisher** — sends via web push (VAPID) or email (SMTP)
+4. **Scheduler** — processes due scheduled events on a polling loop
 
 ## Features
 
-- Rule-based engine with YAML-seeded rules, templates, and preferences
+- Rule-based engine with per-rule Python evaluators and Jinja2 templates
+- Two delivery channels: web push (VAPID) and email (SMTP)
 - Delivery suppression and deduplication (daily / weekly / monthly / yearly scopes)
-- Web push (VAPID) via pywebpush
-- Configurable per-user notification preferences
+- Per-user notification preferences with kind-level opt-in/opt-out
+- Per-community rule overrides
+- Scheduled event delivery
+- Notification catalog with i18n support (`active_kinds.yaml`)
+- Seed-based rule/template management via CLI
+- OPA-enforced access control
 - PostgreSQL persistence via SQLAlchemy async
 
 ## Quick Start
 
-**Docker (recommended):**
-```bash
-docker compose up --build
-```
-
-Starts: `db` (PostgreSQL on port 5433), `initdb` (schema + seed), `api` (port 8000).
-
-**Local Python:**
 ```bash
 uv sync
-python -m db.init_db        # create schema and seed data
-hypercorn api.main:app --bind 0.0.0.0:8000
+task alembic:migrate
+task seed                    # seed rules from ./seed directory
+task run                     # runs on port 8016
 ```
 
 ## Configuration
 
-| Variable | Description | Default |
+| Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | PostgreSQL async URL | required |
-| `DEFAULT_LANG` | Default notification language | `en` |
-| `MAX_PER_DAY_DEFAULT` | Default max notifications per day | `3` |
-| `VAPID_PUBLIC_KEY` | VAPID public key (base64url) | required |
-| `VAPID_PRIVATE_KEY` | VAPID private key (base64url) | required |
-| `VAPID_SUBJECT` | VAPID contact (mailto: or https:) | required |
+| `DATABASE_URL` | `postgresql+asyncpg://...host.docker.internal:15432/nudging` | PostgreSQL async URL |
+| `DEFAULT_LANG` | `en` | Default notification language |
+| `MAX_PER_DAY_DEFAULT` | `3` | Default max notifications per day |
+| `SCHEDULER_POLL_SECONDS` | `30.0` | Scheduler polling interval |
+| `SEED_DIR` | `./seed` | Directory containing rule definitions |
+| `ORCHESTRATOR_URL` | `http://api.celine.localhost/nudging` | Public base URL |
+| `VAPID_PUBLIC_KEY` | — | VAPID public key (base64url) |
+| `VAPID_PRIVATE_KEY` | — | VAPID private key (base64url) |
+| `VAPID_SUBJECT` | `mailto:dev@example.com` | VAPID contact URI |
+| `SMTP_HOST` | — | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP server port |
+| `SMTP_USERNAME` | — | SMTP authentication username |
+| `SMTP_PASSWORD` | — | SMTP authentication password |
+| `SMTP_USE_TLS` | `true` | Use STARTTLS |
+| `EMAIL_FROM` | — | Sender email address |
+| `OIDC__*` | (from celine-sdk) | OIDC settings (audience: `svc-nudging`) |
+
+## CLI
+
+```bash
+nudging-cli seed apply ./seed   # seed rules and templates
+nudging-cli vapid               # generate VAPID keys
+```
 
 ## Documentation
 
 | Document | Description |
 |---|---|
-| [Architecture](https://celine-eu.github.io/projects/nudging-tool/docs/architecture) | Event flow, engine/orchestrator/publisher components, database models |
-| [Engine](https://celine-eu.github.io/projects/nudging-tool/docs/engine) | Rule evaluation, NudgeType/Severity, Jinja2 templates, dedup scopes, YAML seed format |
-| [API Reference](https://celine-eu.github.io/projects/nudging-tool/docs/api-reference) | All endpoints: ingest-event, webpush, notifications, preferences |
-| [Development](https://celine-eu.github.io/projects/nudging-tool/docs/development) | Local setup, VAPID key generation, seed management, running tests |
+| [Architecture](docs/architecture.md) | Event flow, engine/orchestrator/publisher, database models |
+| [Engine](docs/engine.md) | Rule evaluation, evaluators, templates, dedup, seed format |
+| [API Reference](docs/api-reference.md) | All endpoints: admin, notifications, preferences, webpush |
+| [Development](docs/development.md) | Local setup, VAPID keys, seed management, testing |
 
 ## License
 

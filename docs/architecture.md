@@ -2,55 +2,73 @@
 
 ## Event Flow
 
-The nudging pipeline processes events in three sequential stages:
+The nudging pipeline processes events through sequential stages:
 
 | Stage | Component | Responsibility |
 |---|---|---|
-| 1. Ingestion | `POST /ingest-event` | Validates the incoming `DigitalTwinEvent` payload |
-| 2. Rule Evaluation | `engine/engine_service.py` | Matches event against rules, selects nudge type, renders message |
-| 3. Orchestration | `orchestrator/orchestrator.py` | Applies suppression, dedup, preferences |
-| 4. Delivery | `publishers/web/worker.py` | Sends web push notification via pywebpush |
+| 1. Ingestion | `POST /admin/ingest-event` | Validates the incoming event payload |
+| 2. Rule Evaluation | `engine/engine_service.py` | Matches event against rules, runs per-rule Python evaluators, renders messages |
+| 3. Orchestration | `orchestrator/orchestrator.py` | Applies suppression, dedup, frequency limits, user preferences |
+| 4. Delivery | `publishers/web/worker.py`, `publishers/email/worker.py` | Sends web push or email |
+
+Scheduled events follow the same pipeline but are triggered by the background scheduler instead of direct ingestion.
 
 ## Components
 
 ### Engine
 
-The engine receives a `DigitalTwinEvent` and:
-1. Looks up matching rules from the database (seeded from `seed/rules.yaml`)
-2. Evaluates rule conditions against the event's `facts` payload
-3. Selects a `NudgeType` and `Severity`
-4. Renders a Jinja2 message template for the target language
+The engine receives an event and:
+1. Resolves matching rules by `rule_id` or event scenario
+2. Loads each rule's custom Python evaluator from the seed directory
+3. Evaluates whether the rule should fire given the event payload
+4. Applies per-community rule overrides if configured
+5. Renders Jinja2 message templates per channel (web, email) and language
 
 ### Orchestrator
 
-The orchestrator decides whether and how to deliver a nudge:
-- Checks per-user notification preferences (`max_per_day`, language)
-- Applies deduplication: prevents duplicate nudges within a scope window (daily/weekly/monthly/yearly)
-- Applies suppression: respects global delivery limits
-- Emits the delivery record for the publisher
+The orchestrator decides whether and how to deliver a notification:
+- Checks per-user notification preferences (enabled, channels, per-kind opt-in/opt-out)
+- Applies deduplication using `rule_id:user_id:community_id:scope` keys
+- Enforces frequency limits (`max_per_day`)
+- Emits delivery jobs for each applicable channel
 
-### Publisher
+### Publishers
 
-The publisher registry holds registered delivery channels. Currently only `web` is registered, which:
-- Looks up the user's web push subscription endpoint
-- Constructs a VAPID-signed push message
-- Calls the push service via pywebpush
+- **Web push** (`publishers/web/worker.py`) — sends VAPID-authenticated push via pywebpush
+- **Email** (`publishers/email/worker.py`) — sends via SMTP with TLS/SSL support
+
+### Scheduler
+
+`scheduler.py` runs as a background task, polling `scheduled_events` every `SCHEDULER_POLL_SECONDS`. Due events are processed through the engine pipeline in batches.
 
 ## Database Models
 
-| Model | Description |
+PostgreSQL (async via SQLAlchemy + asyncpg):
+
+| Table | Purpose |
 |---|---|
-| `NudgeRule` | Rule definition: event type, conditions, nudge type, severity |
-| `NudgeTemplate` | Jinja2 message template per language and nudge type |
-| `UserPreference` | Per-user preferences: language, max per day, enabled flag |
-| `WebPushSubscription` | Browser push endpoint, keys per user/community |
-| `NudgeDelivery` | Delivery record: nudge, user, timestamp, status, dedup key |
+| `rules` | Rule definitions: id, kind, nudge_type, severity, definition (JSONB) |
+| `rule_overrides` | Per-community overrides for rules |
+| `templates` | Jinja2 message templates per rule, channel, language |
+| `user_preferences` | Per-user preferences: enabled, channels, language, per-kind settings, max_per_day |
+| `nudges_log` | Event processing log |
+| `notifications` | Delivered notifications with read/deleted status |
+| `delivery_log` | Per-channel delivery attempt records |
+| `web_push_subscriptions` | Browser push subscription endpoints per user/community |
+| `scheduled_events` | Future events to be processed at `fire_at` time |
+
+## Authorization
+
+OPA-enforced via `policies/celine/nudging/authz.rego`:
+- `ingest` action — service accounts with `nudging.ingest` or `nudging.admin` scope
+- `admin` action — service accounts with `nudging.admin` scope
+- User endpoints — JWT-based ownership (notifications/preferences scoped to authenticated user)
 
 ## Stack
 
-- Python 3.11
-- FastAPI + Hypercorn
+- Python >= 3.12, FastAPI, uvicorn
 - SQLAlchemy 2 (async) + asyncpg
-- PostgreSQL 16
-- Jinja2 for template rendering
+- Alembic for migrations
 - pywebpush for VAPID web push
+- Jinja2 for template rendering
+- Pydantic settings

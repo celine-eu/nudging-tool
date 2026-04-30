@@ -1,33 +1,27 @@
 # Engine
 
-The engine is the core rule evaluation component of the nudging-tool. It maps incoming Digital Twin events to nudge decisions.
+The engine is the core rule evaluation component. It maps incoming events to notification decisions using per-rule Python evaluators.
 
 ## Rule Evaluation
 
 For each incoming event:
-1. The engine queries the database for rules matching the `event_type`.
-2. Each rule is evaluated against the event's `facts` dictionary (conditions may check field presence, thresholds, or scenario values).
-3. The first matching rule's `nudge_type` and `severity` are selected.
-4. The appropriate Jinja2 template is rendered using the facts as context variables.
+1. The engine resolves matching rules by `rule_id` list or event scenario mapping
+2. Each rule's custom Python evaluator is loaded from `seed/rules/<rule_id>/evaluate.py`
+3. The evaluator decides whether the rule should fire given the event payload
+4. If it fires, the appropriate Jinja2 template is rendered per channel and language
+5. Per-community rule overrides may modify rule behavior
 
-## NudgeType and Severity
+## NudgeType
 
 | NudgeType | Description |
 |---|---|
-| `energy_alert` | Significant deviation in energy behavior |
-| `savings_opportunity` | Actionable suggestion to reduce consumption or increase sharing |
-| `community_milestone` | Community-level achievement or threshold crossed |
-| `incentive_update` | Changes to incentive rates or GSE values |
-
-| Severity | Description |
-|---|---|
-| `info` | Informational, low urgency |
-| `warning` | Attention required |
-| `critical` | Immediate action suggested |
+| `informative` | General information, low urgency |
+| `opportunity` | Actionable suggestion or flexibility window |
+| `alert` | Attention required, higher urgency |
 
 ## Jinja2 Templates
 
-Templates use the `facts` payload as context variables:
+Templates use the event `facts` payload as context variables:
 
 ```
 {% if delta_pct > 20 %}
@@ -37,54 +31,65 @@ Your import changed by {{ delta_pct|round(1) }}%.
 {% endif %}
 ```
 
-Templates are language-specific. The engine selects the template matching the user's preferred language (from `UserPreference`) or falls back to `DEFAULT_LANG`.
+Templates are organized per channel (web, email) and language. The engine selects the template matching the user's preferred language or falls back to `DEFAULT_LANG`.
 
 ## Deduplication Scopes
 
-Deduplication prevents sending the same nudge type to the same user multiple times within a window:
+Deduplication prevents sending the same rule to the same user multiple times within a window:
 
 | Scope | Window |
 |---|---|
-| `daily` | Same nudge type not repeated today |
-| `weekly` | Same nudge type not repeated this ISO week |
-| `monthly` | Same nudge type not repeated this month |
-| `yearly` | Same nudge type not repeated this year |
+| `daily` | Same rule not repeated today |
+| `weekly` | Same rule not repeated this ISO week |
+| `monthly` | Same rule not repeated this month |
+| `yearly` | Same rule not repeated this year |
 
-The dedup key is composed of: `user_id + community_id + nudge_type + scope`.
+The dedup key is: `rule_id:user_id:community_id:scope`.
 
-## YAML Seed Format
+## Notification Kinds
 
-Rules, templates, and preferences are seeded from YAML files at DB initialization:
+`active_kinds.yaml` defines the catalog of notification kinds with i18n labels. Users can opt in or out of specific kinds via their preferences.
 
-**seed/rules.yaml:**
-```yaml
-- event_type: imported_up
-  conditions:
-    delta_pct:
-      gte: 10.0
-  nudge_type: energy_alert
-  severity: warning
-  frequency: daily
+## Rule Overrides
+
+Per-community overrides allow customizing rule behavior (e.g., different thresholds, templates, or enabled status) without modifying the base rule definition.
+
+## Seed Directory Structure
+
+Rules are seeded from a directory structure (default `./seed`):
+
+```
+seed/
+  rules/
+    imported_up/
+      rule.yaml           # Rule definition (kind, nudge_type, severity, etc.)
+      evaluate.py          # Custom Python evaluator
+      templates/
+        web_en.j2          # Web push template (English)
+        web_it.j2          # Web push template (Italian)
+        email_en.j2        # Email template (English)
+    flexibility_opportunity/
+      rule.yaml
+      evaluate.py
+      templates/
+        web_en.j2
+    ...
+  active_kinds.yaml        # Notification kind catalog with i18n
 ```
 
-**seed/templates.yaml:**
-```yaml
-- nudge_type: energy_alert
-  severity: warning
-  language: en
-  title: "Grid import increased"
-  body: "Your grid import rose by {{ delta_pct|round(1) }}% compared to last {{ period }}."
+Each rule directory contains:
+- `rule.yaml` — rule metadata (kind, nudge_type, severity, definition)
+- `evaluate.py` — Python module with an evaluate function that receives the event and returns a decision
+- `templates/` — Jinja2 templates named `{channel}_{lang}.j2`
+
+## Seed Management
+
+```bash
+# Apply seed data via CLI
+nudging-cli seed apply ./seed --client-id celine-cli --client-secret celine-cli
+
+# Or via taskfile
+task seed
 ```
 
-**seed/preferences.yaml:**
-```yaml
-- user_id: user-it
-  community_id: COMM1
-  language: it
-  max_per_day: 3
-  enabled: true
-```
-
-## Seed Data Management
-
-Seed data is applied by `python -m db.init_db`, which performs `drop_all + create_all` followed by seed loading. To update rules without resetting, modify YAML files and re-run the init script in a dev environment. Production updates should use Alembic migrations or direct DB writes.
+The CLI authenticates and calls `POST /admin/seed/apply` to upsert rules and templates from the seed directory.

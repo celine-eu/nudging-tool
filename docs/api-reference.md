@@ -1,41 +1,80 @@
 # API Reference
 
-Interactive OpenAPI docs: `http://localhost:8000/docs`
+Interactive OpenAPI docs: `http://localhost:8016/docs`
 
-## Event Ingestion
+## Admin Routes
 
-### `POST /ingest-event`
+All admin routes are under the `/admin` prefix and require service account authentication with appropriate scopes.
 
-Ingest a Digital Twin event and trigger rule evaluation, orchestration, and delivery.
+### `POST /admin/ingest-event`
+
+Ingest an event and trigger rule evaluation, orchestration, and delivery.
 
 **Request body:**
-
 ```json
 {
   "event_type": "imported_up",
   "user_id": "user-it",
   "community_id": "COMM1",
   "facts": {
-    "facts_version": "1.0",
     "scenario": "imported_up",
     "time": "2026-01-10",
-    "delta_pct": 25.0,
-    "cur": 123.0,
-    "prev": 90.0
+    "delta_pct": 25.0
   }
 }
 ```
 
-**Response codes:**
+### `POST /admin/scheduled-events`
 
-| Code | Meaning |
-|---|---|
-| `200` | Nudge created and at least one delivery dispatched |
-| `202` | Nudge created but all deliveries suppressed by orchestrator |
-| `204` | No matching rule found for this event type |
-| `400` | Unknown scenario or rule resolution failure |
-| `409` | Delivery suppressed by deduplication |
-| `422` | Missing or invalid facts fields |
+Create a scheduled event to be processed at a future time.
+
+### `POST /admin/seed/apply`
+
+Apply seed data (rules, templates) from a seed directory. Used by the `nudging-cli seed apply` command.
+
+### `POST /admin/webpush/send-test`
+
+Send a test push notification to a registered subscription.
+
+### `GET /admin/notifications`
+
+List notifications (admin view, not scoped to a single user).
+
+---
+
+## User Notifications
+
+### `GET /notifications`
+
+List delivered notifications for the authenticated user.
+
+**Query params:**
+- `limit` — max results
+- `offset` — pagination offset
+
+### `PUT /notifications/{id}/read`
+
+Mark a notification as read.
+
+### `DELETE /notifications/{id}`
+
+Soft-delete a notification.
+
+---
+
+## User Preferences
+
+### `GET /preferences/me`
+
+Get notification preferences for the authenticated user.
+
+### `GET /preferences/catalog`
+
+Get the notification kind catalog (available notification types with i18n labels).
+
+### `PUT /preferences/me`
+
+Update notification preferences.
 
 ---
 
@@ -45,79 +84,18 @@ Ingest a Digital Twin event and trigger rule evaluation, orchestration, and deli
 
 Returns the VAPID public key for browser push subscription setup.
 
-**Response:** `{"public_key": "BNF..."}`
-
 ### `POST /webpush/subscribe`
 
 Register a browser push subscription.
 
-```json
-{
-  "user_id": "user-it",
-  "community_id": "COMM1",
-  "subscription": {
-    "endpoint": "https://fcm.googleapis.com/fcm/send/...",
-    "keys": {
-      "p256dh": "...",
-      "auth": "..."
-    }
-  }
-}
-```
-
 ### `POST /webpush/unsubscribe`
 
-Remove a push subscription by user and community.
-
-### `POST /webpush/send-test`
-
-Send a test push notification to a registered subscription.
-
-```json
-{
-  "user_id": "user-it",
-  "community_id": "COMM1"
-}
-```
+Remove a push subscription.
 
 ---
 
-## Notifications
+## Health
 
-### `GET /notifications`
+### `GET /health`
 
-List delivered notifications for a user.
-
-**Query params:**
-- `user_id` (required)
-- `community_id` (required)
-- `limit` — default 20
-- `offset` — pagination offset
-
-### `GET /notifications/{id}`
-
-Get a single notification delivery record.
-
----
-
-## Preferences
-
-### `GET /preferences`
-
-Get notification preferences for a user/community pair.
-
-**Query params:** `user_id`, `community_id`
-
-### `PUT /preferences`
-
-Update notification preferences.
-
-```json
-{
-  "user_id": "user-it",
-  "community_id": "COMM1",
-  "language": "en",
-  "max_per_day": 5,
-  "enabled": true
-}
-```
+Service health check.

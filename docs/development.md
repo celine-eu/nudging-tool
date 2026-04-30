@@ -2,111 +2,106 @@
 
 ## Prerequisites
 
-- Python ≥ 3.11 (or `uv`)
-- PostgreSQL 16
-- Docker and Docker Compose (optional)
+- Python >= 3.12 and `uv`
+- `task` (go-task)
+- PostgreSQL at `localhost:15432` (credentials `postgres:securepassword123`)
 
 ## Local Setup
 
 ```bash
-# Install dependencies
 uv sync
-# OR: pip install -r requirements.txt
-
-# Set environment variables
-export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/nudging
-export VAPID_PUBLIC_KEY=<base64url-public-key>
-export VAPID_PRIVATE_KEY=<base64url-private-key>
-export VAPID_SUBJECT=mailto:admin@example.com
-
-# Initialize database (drop/create + seed)
-python -m db.init_db
-
-# Start the API
-hypercorn api.main:app --bind 0.0.0.0:8000
+task alembic:migrate       # apply database migrations
+task seed                  # seed rules and templates
+task run                   # start on port 8016
 ```
 
-## Docker Setup
+## Taskfile Commands
+
+| Command | Description |
+|---|---|
+| `task run` | Start dev server on port 8016 |
+| `task debug` | Start with debugger (port 48016) |
+| `task test` | Run pytest |
+| `task seed` | Seed rules from `./seed` directory |
+| `task alembic:migrate` | Apply all pending migrations |
+| `task alembic:sync-model` | Generate new Alembic migration |
+| `task alembic:reset` | Reset DB to base |
+| `task release` | Run semantic-release |
+
+## VAPID Key Generation
 
 ```bash
-docker compose up --build
+nudging-cli vapid
 ```
 
-Services started:
-- `db` — PostgreSQL on `localhost:5433`
-- `initdb` — schema creation + seed
-- `api` — FastAPI on `http://localhost:8000`
-
-## Generating VAPID Keys
-
-```bash
-pip install pywebpush
-python -c "
-from py_vapid import Vapid
-v = Vapid()
-v.generate_keys()
-print('Public:', v.public_key)
-print('Private:', v.private_key)
-"
-```
+Set the generated keys as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` environment variables.
 
 ## Seed Data Management
 
-Seed files are loaded on `python -m db.init_db`. This destroys and recreates the database schema before inserting seed data.
+Rules are stored in `seed/rules/<rule_id>/` directories, each containing:
+- `rule.yaml` — rule definition
+- `evaluate.py` — custom Python evaluator
+- `templates/` — Jinja2 templates per channel and language
 
-Files:
-- `seed/rules.yaml` — nudge rules
-- `seed/templates.yaml` — Jinja2 message templates per language
-- `seed/preferences.yaml` — default user preferences
+Apply seeds via:
+```bash
+task seed
+# or directly:
+nudging-cli seed apply ./seed --client-id celine-cli --client-secret celine-cli
+```
 
-For development, edit YAML files and re-run `python -m db.init_db`. Do not use this in production — use Alembic migrations instead.
+The CLI calls `POST /admin/seed/apply` to upsert rules and templates.
+
+## Database Migrations
+
+```bash
+task alembic:migrate                          # apply pending
+task alembic:sync-model -- "description"      # create new migration
+task alembic:reset                            # reset to base
+```
 
 ## Running Tests
 
 ```bash
-pytest -q
+task test
+# or: uv run pytest -q
 ```
-
-Manual HTTP tests using VSCode REST Client or IntelliJ HTTP client are in `tests/nudging_rules_tests.http`.
-
-## Known Issues
-
-- `tests/test_ingest_mock.py` fails with `no_rule_for_inferred_frequency` in default configuration — a mismatch between the test scenario and the seeded rule frequency.
-- No `/health` endpoint is currently implemented.
-- Only the `web` publisher channel is registered in the publisher registry.
 
 ## Project Layout
 
 ```
-src/ (or top-level module path)
-  api/
-    main.py
-    routes/
-      ingest.py
-      webpush.py
-  config/settings.py
-  db/
-    models.py
-    session.py
-    init_db.py
-    seed_db.py
-    seed/
-      rules.yaml
-      templates.yaml
-      preferences.yaml
+src/celine/nudging/
+  main.py                         # FastAPI app factory (create_app)
+  settings.py                     # Pydantic settings
+  scheduler.py                    # Background scheduled event processor
+  api/routes/
+    meta.py                       # /health
+    webpush.py                    # /webpush/* (subscribe, unsubscribe, vapid)
+    notifications.py              # /notifications (user-facing)
+    preferences.py                # /preferences/me, /preferences/catalog
+    admin/
+      ingest.py                   # /admin/ingest-event
+      webpush.py                  # /admin/webpush/send-test
+      notifications.py            # /admin/notifications
+      scheduled_events.py         # /admin/scheduled-events
+      seed.py                     # /admin/seed/apply
   engine/
-    engine_service.py
-    rules/
-      contract.py
-      models.py
-    templates/renderer.py
+    engine_service.py             # Rule evaluation and template rendering
   orchestrator/
-    orchestrator.py
-    policies.py
-    preferences.py
-    models.py
+    orchestrator.py               # Delivery policy enforcement
+    preferences.py                # User preference resolution
   publishers/
-    base.py
-    registry.py
-    web/worker.py
+    web/worker.py                 # Web push delivery
+    email/worker.py               # Email delivery
+  db/
+    models.py                     # SQLAlchemy ORM models
+    session.py                    # Async session management
+    auto_seed.py                  # Auto-seed on startup
+  cli/
+    main.py                       # CLI entry point (nudging-cli)
+policies/                         # OPA .rego policy files
+seed/                             # Rule definitions and templates
+  rules/                          # Per-rule directories
+  active_kinds.yaml               # Notification kind catalog
+alembic/                          # Database migrations
 ```
