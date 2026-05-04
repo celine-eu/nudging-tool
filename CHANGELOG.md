@@ -2,6 +2,48 @@
 
 <!-- version list -->
 
+## v1.6.0 (2026-05-04)
+
+### Chores
+
+- Update docs
+  ([`6ef1f60`](https://github.com/celine-eu/nudging-tool/commit/6ef1f60bd8168d57f785e84264f57bdc6fb031eb))
+
+- Update docs
+  ([`3e2a324`](https://github.com/celine-eu/nudging-tool/commit/3e2a3240d61efbabd124a57799164db9893ae747))
+
+- Upgrade celine-sdk to 1.10.0
+  ([`9badfc6`](https://github.com/celine-eu/nudging-tool/commit/9badfc6e1799c8104891d18b746667a827dfd113))
+
+- Upgrade celine-sdk to 1.11.0
+  ([`e35aea0`](https://github.com/celine-eu/nudging-tool/commit/e35aea002197d829c09e8c7bedee274281dfb976))
+
+- Upgrade celine-sdk to 1.12.0
+  ([`5320a43`](https://github.com/celine-eu/nudging-tool/commit/5320a43041d67c4de99b6ced48e18cbd3fb2cf6d))
+
+- Upgrade celine-sdk to 1.12.1
+  ([`a5f98a7`](https://github.com/celine-eu/nudging-tool/commit/a5f98a75d524c8537477577e8696d30737a904f5))
+
+- **deps**: Bump fastapi from 0.129.0 to 0.133.0
+  ([`73fb82c`](https://github.com/celine-eu/nudging-tool/commit/73fb82c141b520d6dccf6902b27edc99a8c5e922))
+
+- **deps**: Bump the runtime-dependencies group across 1 directory with 3 updates
+  ([`febf750`](https://github.com/celine-eu/nudging-tool/commit/febf75070208255f4698a009b6bff335a8636a47))
+
+- **deps-dev**: Bump the development-dependencies group across 1 directory with 3 updates
+  ([`e27bdef`](https://github.com/celine-eu/nudging-tool/commit/e27bdef37aef67ce50401660d312f6413cdcf5b1))
+
+### Continuous Integration
+
+- Bump the actions group across 1 directory with 5 updates
+  ([`d845cfc`](https://github.com/celine-eu/nudging-tool/commit/d845cfc3c1576d03e2f47f7db13be3335539c828))
+
+### Features
+
+- Added tracking on notification interaction
+  ([`bd020f3`](https://github.com/celine-eu/nudging-tool/commit/bd020f34797ea290372ce9e60071a507c4c52f53))
+
+
 ## v1.5.0 (2026-04-15)
 
 ### Chores

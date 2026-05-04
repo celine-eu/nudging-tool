@@ -13,8 +13,9 @@
 @clientId = svc-digital-twin
 @clientSecret = svc-digital-twin
 @communityId = example_rec
-@userId = ah-00001
-@accessToken = !!ACCESS-TOKEN!!
+@userId = ah-00003
+@accessToken = eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIxODdDWUZCR2ZITUNyeDlMRXJIenNRVFhaMlNzTjlvQ3lYTVZZc0FDcF9FIn0.eyJleHAiOjE3Nzc4NzcyNjQsImlhdCI6MTc3Nzg3Njk2NCwianRpIjoidHJydGNjOmYwNDlmOGRjLTNkMDItZjk2NC03ZTI3LTA5Y2I4NjczNGFlZSIsImlzcyI6Imh0dHA6Ly9rZXljbG9hay5jZWxpbmUubG9jYWxob3N0L3JlYWxtcy9jZWxpbmUiLCJhdWQiOlsic3ZjLXJlYy1yZWdpc3RyeSIsInN2Yy1udWRnaW5nIiwic3ZjLXBpcGVsaW5lcyIsInN2Yy1kYXRhc2V0LWFwaSIsInN2Yy1mbGV4aWJpbGl0eSJdLCJzdWIiOiI5NzM1NjgxOC01YmNjLTQ2NGUtYWI5OC02YjliZWE4ZGU1NjAiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJzdmMtZGlnaXRhbC10d2luIiwic2NvcGUiOiJmbGV4aWJpbGl0eS5jb21taXR0ZWQud3JpdGUgZGF0YXNldC5xdWVyeSBmbGV4aWJpbGl0eS5jb21taXR0ZWQucmVhZCBkaWdpdGFsLXR3aW4uYWRtaW4gbnVkZ2luZy5pbmdlc3QgcmVjLXJlZ2lzdHJ5Lmxvb2t1cCBwaXBlbGluZXMucnVucy5yZWFkIiwiY2xpZW50SG9zdCI6IjE3Mi4yNS4wLjEiLCJjbGllbnRBZGRyZXNzIjoiMTcyLjI1LjAuMSIsImNsaWVudF9pZCI6InN2Yy1kaWdpdGFsLXR3aW4ifQ.KCbw4kuso9xAR12HhCMbFNCDSlGaKbqaNOF5fExC_F00o7CAmzdkvdCYg6VJc8DkCLyHYW2i66OxEMn_vhGsH26TFdj7QIyh_H-8SGeDaz7gDMBFGwULiWcf85WCuoSAbO82SLCrowAlQx3Dyb6EK5e1utYFLlPGSbKlzL_o4DmmymEvcL8RHNtaXoqLM6X0RZhkU9faTHSHVkfER2Ga4Al0GoO4oPXqyWonqW8kG3mZvvI7oxNkG5SKyC4ysgae-arMQAxHEUwMR6Yc_C_IiQzVLYoIWqSrM5OcQVDgyCoIyz4z8iwDV-P9WHLts7ExoqbZSBxqVxyHCa6bY8Iesg
+
 
 ### Healthcheck
 GET {{baseUrl}}/health
@@ -26,6 +27,19 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=client_credentials&
 client_id={{clientId}}&
 client_secret={{clientSecret}}
+
+### send-test tracked push
+POST {{baseUrl}}/webpush/send-test
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "user_id": "{{userId}}",
+  "community_id": "{{communityId}}",
+  "title": "Tracked push test",
+  "body": "Cliccami per verificare il tracking.",
+  "url": "/"
+}
 
 ### imported_up [it]
 POST {{baseUrl}}/admin/ingest-event
@@ -39,7 +53,7 @@ Authorization: Bearer {{accessToken}}
   "facts": {
     "facts_version": "1.0",
     "scenario": "imported_up",
-    "time": "2026-03-05",
+    "time": "2026-04-05",
     "delta_pct": 35,
     "cur": 135,
     "prev": 100,
@@ -61,6 +75,26 @@ Authorization: Bearer {{accessToken}}
     "scenario": "inverter_error_critical_daily_v1",
     "time": "2026-03-08",
     "system_status_error_last_day_total": 2,
+    "lang": "it"
+  }
+}
+
+### extr_event [it] - active kind, should not be suppressed as kind_disabled
+POST {{baseUrl}}/admin/ingest-event
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "event_type": "extr_event",
+  "user_id": "{{userId}}",
+  "community_id": "{{communityId}}",
+  "facts": {
+    "facts_version": "1.0",
+    "scenario": "extr_event",
+    "period": "2026-05-09",
+    "window_start": "2026-04-30T08:00:00Z",
+    "window_end": "2026-04-30T20:00:00Z",
+    "event_type": "storm_alert",
     "lang": "it"
   }
 }
