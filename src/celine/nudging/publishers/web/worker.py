@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -13,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from celine.nudging.db.models import DeliveryLog, WebPushSubscription
 from celine.nudging.orchestrator.models import DeliveryJob
 from celine.nudging.publishers.base import Publisher, PublishResult
-from celine.nudging.config.settings import settings
+from celine.nudging.notifications_tracking import sign_click_tracking_token
 from celine.nudging.utils import get_vapid
 
 
@@ -64,6 +63,10 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
             "url": getattr(job, "url", None) or "/",
             "nudge_id": job.nudge_id,
             "rule_id": job.rule_id,
+            "notification_id": job.notification_id,
+            "click_tracking_token": sign_click_tracking_token(job.notification_id)
+            if job.notification_id
+            else None,
         },
     }
 
@@ -105,12 +108,6 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
     # Determine final status
     status = "sent" if sent > 0 else "failed"
     sent_at = now if sent > 0 else None
-
-    destination = job.destination
-    if subscriptions:
-        destination = f"{job.destination}:multi"
-    else:
-        destination = f"{job.destination}:none"
 
     # Create delivery log (same style as send_web)
     db.add(

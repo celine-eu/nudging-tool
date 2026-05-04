@@ -79,6 +79,10 @@ class NotificationOut(BaseModel):
     body: str
     status: str = Field(..., description="pending | sent | suppressed | failed")
     read_at: datetime | None = Field(None, description="Null if unread")
+    clicked_at: datetime | None = Field(None, description="Null if the push was never clicked")
+    click_action: str | None = Field(
+        None, description="Action identifier reported by the notification click event"
+    )
     deleted_at: datetime | None = Field(None, description="Null if not soft-deleted")
     created_at: datetime
 
@@ -104,6 +108,8 @@ class AdminNotificationOut(BaseModel):
     body: str
     status: str
     read_at: datetime | None = None
+    clicked_at: datetime | None = None
+    click_action: str | None = None
     deleted_at: datetime | None = None
     created_at: datetime
 
@@ -220,6 +226,13 @@ class VapidPublicKeyResponse(BaseModel):
     public_key: str
 
 
+class NotificationClickTrackIn(BaseModel):
+    token: str
+    action: str | None = Field(
+        None, description="Notification action identifier; empty means default notification body click"
+    )
+
+
 class SendTestRequest(BaseModel):
     """Admin-only: user_id is explicit because an admin targets any user."""
 
@@ -236,3 +249,4 @@ class SendTestResponse(BaseModel):
     status: str
     sent: int | None = None
     failed: int | None = None
+    notification_id: str | None = None

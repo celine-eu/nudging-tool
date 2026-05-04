@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import date
 from uuid import uuid4
 
 from sqlalchemy import func, select
@@ -64,6 +64,7 @@ def _build_delivery_jobs(
                 job_id=uuid4().hex,
                 rule_id=n.rule_id,
                 nudge_id=n.id,
+                notification_id=notification.id,
                 channel=Channel.web,
                 destination=f"web:{n.user_id}:{n.community_id}" if n.community_id else f"web:{n.user_id}",
                 title=notification.title,
@@ -87,6 +88,7 @@ def _build_delivery_jobs(
                 job_id=uuid4().hex,
                 rule_id=n.rule_id,
                 nudge_id=n.id,
+                notification_id=notification.id,
                 channel=Channel.email,
                 destination=recipient,
                 title=notification.title,

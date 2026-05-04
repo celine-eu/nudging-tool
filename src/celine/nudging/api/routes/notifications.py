@@ -16,9 +16,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from celine.nudging.api.schemas import NotificationOut
+from celine.nudging.api.schemas import NotificationClickTrackIn, NotificationOut, StatusResponse
 from celine.nudging.db.models import Notification
 from celine.nudging.db.session import get_db
+from celine.nudging.notifications_tracking import unsign_click_tracking_token
 from celine.nudging.security.policies import get_current_user
 from celine.sdk.auth import JwtUser
 
@@ -85,6 +86,43 @@ async def list_notifications(
 
     result = await db.execute(q)
     return list(result.scalars().all())
+
+
+@router.post(
+    "/track-click",
+    response_model=StatusResponse,
+    summary="Track notification click",
+    description=(
+        "Public endpoint used by a service worker to record that a push notification was clicked. "
+        "The request must carry a valid signed tracking token from the push payload."
+    ),
+    status_code=status.HTTP_200_OK,
+)
+async def track_click(
+    body: NotificationClickTrackIn,
+    db: AsyncSession = Depends(get_db),
+) -> StatusResponse:
+    try:
+        notification_id = unsign_click_tracking_token(body.token)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    result = await db.execute(select(Notification).where(Notification.id == notification_id))
+    notification = result.scalar_one_or_none()
+    if notification is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found"
+        )
+
+    if notification.clicked_at is None:
+        notification.clicked_at = datetime.now(timezone.utc)
+        action = (body.action or "").strip()
+        notification.click_action = action or "default"
+        await db.commit()
+
+    return StatusResponse(status="ok")
 
 
 @router.put(

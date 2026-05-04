@@ -26,6 +26,7 @@ _OPEN_PATHS: frozenset[str] = frozenset(
         "/redoc",
         "/openapi.json",
         "/favicon.ico",
+        "/notifications/track-click",
     }
 )
 

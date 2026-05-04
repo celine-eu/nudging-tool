@@ -1,4 +1,3 @@
-import os
 from typing import Dict, List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +26,7 @@ class Settings(BaseSettings):
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
     VAPID_SUBJECT: str = "mailto:dev@example.com"
+    CLICK_TRACKING_SECRET: str = ""
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USERNAME: str = ""

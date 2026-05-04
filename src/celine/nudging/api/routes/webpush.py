@@ -64,9 +64,9 @@ async def subscribe(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
-    subscription_user_id = _canonical_user_id(user)
+    owned_user_ids = _owned_user_ids(user)
     filters = [
-        WebPushSubscription.user_id.in_(_owned_user_ids(user)),
+        WebPushSubscription.user_id.in_(owned_user_ids),
         WebPushSubscription.endpoint == body.subscription.endpoint,
     ]
     if body.community_id is None:
@@ -75,20 +75,24 @@ async def subscribe(
         filters.append(WebPushSubscription.community_id == body.community_id)
 
     q = await db.execute(select(WebPushSubscription).where(*filters))
-    row = q.scalar_one_or_none()
+    rows = list(q.scalars().all())
+    rows_by_user_id = {row.user_id: row for row in rows}
 
-    if row is None:
-        row = WebPushSubscription(
-            id=str(uuid.uuid4()),
-            user_id=subscription_user_id,
-            community_id=body.community_id,
-            endpoint=body.subscription.endpoint,
-            p256dh=body.subscription.keys.p256dh,
-            auth=body.subscription.keys.auth,
-            enabled=True,
-        )
-        db.add(row)
-    else:
+    for subscription_user_id in owned_user_ids:
+        row = rows_by_user_id.get(subscription_user_id)
+        if row is None:
+            row = WebPushSubscription(
+                id=str(uuid.uuid4()),
+                user_id=subscription_user_id,
+                community_id=body.community_id,
+                endpoint=body.subscription.endpoint,
+                p256dh=body.subscription.keys.p256dh,
+                auth=body.subscription.keys.auth,
+                enabled=True,
+            )
+            db.add(row)
+            continue
+
         row.user_id = subscription_user_id
         row.p256dh = body.subscription.keys.p256dh
         row.auth = body.subscription.keys.auth

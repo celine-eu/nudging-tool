@@ -60,6 +60,17 @@ Mark a notification as read.
 
 Soft-delete a notification.
 
+### `POST /notifications/track-click`
+
+Track that a web push notification has been clicked.
+
+```json
+{
+  "token": "signed-tracking-token-from-push-payload",
+  "action": "default"
+}
+```
+
 ---
 
 ## User Preferences

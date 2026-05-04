@@ -18,6 +18,7 @@ class DeliveryJob(BaseModel):
     job_id: str
     rule_id: str
     nudge_id: str
+    notification_id: str | None = None
     channel: Channel
     destination: str
     title: str
