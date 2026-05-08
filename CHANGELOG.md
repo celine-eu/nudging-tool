@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.6.1 (2026-05-08)
+
+### Bug Fixes
+
+- Include seed/ directory in Docker image
+  ([`b801af2`](https://github.com/celine-eu/nudging-tool/commit/b801af23c7de346023e27b6cbcd132e779b233cb))
+
+
 ## v1.6.0 (2026-05-04)
 
 ### Chores
