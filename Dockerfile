@@ -26,6 +26,7 @@ COPY src ./src
 COPY policies ./policies
 COPY alembic ./alembic
 COPY alembic.ini ./
+COPY seed ./seed
 
 # Install the project itself
 RUN uv pip install --no-deps .
@@ -43,6 +44,7 @@ COPY --from=builder --chown=app:app /app/src       /app/src
 COPY --from=builder --chown=app:app /app/policies  /app/policies
 COPY --from=builder --chown=app:app /app/alembic   /app/alembic
 COPY --from=builder --chown=app:app /app/alembic.ini /app/alembic.ini
+COPY --from=builder --chown=app:app /app/seed      /app/seed
 
 ENV PATH="/app/.venv/bin:${PATH}" \
     VIRTUAL_ENV="/app/.venv"
