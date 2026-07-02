@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.6.2 (2026-07-02)
+
+### Bug Fixes
+
+- Use sdk group extraction
+  ([`27839e4`](https://github.com/celine-eu/nudging-tool/commit/27839e48f074606bcb80f907146bdc2a77225f25))
+
+### Chores
+
+- Upgrade celine-sdk to 1.13.0
+  ([`39978fe`](https://github.com/celine-eu/nudging-tool/commit/39978fe2dc0b1deb0a1e8592f6c6a1c890cf953c))
+
+
 ## v1.6.1 (2026-05-08)
 
 ### Bug Fixes
