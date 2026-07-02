@@ -79,10 +79,8 @@ def _scopes_from_user(user: JwtUser) -> list[str]:
 
 
 def _groups_from_user(user: JwtUser) -> list[str]:
-    groups: Any = user.claims.get("groups", [])
-    if isinstance(groups, list):
-        return [str(g) for g in groups]
-    return []
+    from celine.sdk.auth.jwt import extract_groups
+    return extract_groups(user.claims)
 
 
 def _subject_from_user(user: JwtUser) -> Subject:
