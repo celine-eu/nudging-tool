@@ -25,6 +25,7 @@ class StatusResponse(BaseModel):
 
 
 class UserPreferenceOut(BaseModel):
+    lang: str = "en"
     max_per_day: int = Field(..., ge=1, le=10)
     channel_email: bool = False
     email: str | None = None
@@ -33,6 +34,7 @@ class UserPreferenceOut(BaseModel):
 
 class UserPreferenceUpdateIn(BaseModel):
     max_per_day: int = Field(..., ge=1, le=10)
+    lang: str | None = None
     channel_email: bool | None = None
     email: str | None = None
     enabled_notification_kinds: list[str] | None = None

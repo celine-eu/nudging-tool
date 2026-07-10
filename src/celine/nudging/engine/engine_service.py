@@ -40,6 +40,13 @@ NON_ENERGY_FAMILIES: set[str] = {
 }
 
 
+def _normalize_lang(lang: str | None) -> str | None:
+    if not isinstance(lang, str):
+        return None
+    normalized = lang.strip().lower().split("-")[0]
+    return normalized or None
+
+
 class EngineResultStatus(str, Enum):
     CREATED = "created"
     NOT_TRIGGERED = "not_triggered"
@@ -171,8 +178,8 @@ async def _resolve_lang(
     community_id: str | None,
     facts: dict,
 ) -> str:
-    lang = facts.get("lang")
-    if isinstance(lang, str) and lang:
+    lang = _normalize_lang(facts.get("lang"))
+    if lang:
         return lang
     res = await db.execute(
         select(UserPreference.lang)
@@ -185,7 +192,7 @@ async def _resolve_lang(
         )
         .order_by(UserPreference.community_id.is_(None).asc())
     )
-    return res.scalar_one_or_none() or settings.DEFAULT_LANG
+    return _normalize_lang(res.scalar_one_or_none()) or settings.DEFAULT_LANG
 
 
 def compute_dedup_key(
@@ -246,7 +253,8 @@ async def _load_rule_and_template(
     if rule is None:
         raise ValueError(f"Rule not found or disabled: {rule_id}")
 
-    for try_lang in (lang, "en"):
+    fallback_lang = _normalize_lang(settings.DEFAULT_LANG) or "en"
+    for try_lang in dict.fromkeys((lang, fallback_lang, "en")):
         tmpl_res = await db.execute(
             select(Template).where(
                 Template.rule_id == rule_id, Template.lang == try_lang
@@ -349,7 +357,7 @@ async def run_engine_batch(
     lang: str | None = None,
 ) -> list[EngineResult]:
     facts_in_raw = _facts_from_event(evt)
-    lang = lang or await _resolve_lang(
+    lang = _normalize_lang(lang) or await _resolve_lang(
         db,
         user_id=str(evt.user_id),
         community_id=str(evt.community_id) if evt.community_id is not None else None,

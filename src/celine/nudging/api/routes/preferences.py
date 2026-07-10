@@ -21,6 +21,7 @@ from celine.sdk.auth import JwtUser
 
 router = APIRouter(prefix="/preferences", tags=["preferences"])
 _ENABLED_KINDS_KEY = "enabled_notification_kinds"
+_SUPPORTED_LANGS = {"en", "it", "es", "ca"}
 
 
 def _canonical_user_id(user: JwtUser) -> str:
@@ -50,11 +51,23 @@ async def _load_preference(user: JwtUser, db: AsyncSession) -> UserPreference | 
 
 
 def _preferred_lang(pref: UserPreference | None, lang: str | None) -> str:
-    if isinstance(lang, str) and lang.strip():
-        return lang.strip().lower()
-    if pref and isinstance(pref.lang, str) and pref.lang.strip():
-        return pref.lang.strip().lower()
+    normalized = _normalize_lang(lang)
+    if normalized:
+        return normalized
+    if pref:
+        normalized = _normalize_lang(pref.lang)
+        if normalized:
+            return normalized
     return settings.DEFAULT_LANG
+
+
+def _normalize_lang(lang: str | None) -> str | None:
+    if not isinstance(lang, str):
+        return None
+    normalized = lang.strip().lower().split("-")[0]
+    if normalized in _SUPPORTED_LANGS:
+        return normalized
+    return None
 
 
 def _notification_catalog(pref: UserPreference | None, lang: str | None) -> list[dict]:
@@ -83,12 +96,14 @@ async def get_my_preferences(
     catalog = _notification_catalog(pref, None)
     if pref is None:
         return UserPreferenceOut(
+            lang=settings.DEFAULT_LANG,
             max_per_day=3,
             channel_email=False,
             email=None,
             enabled_notification_kinds=[item["kind"] for item in catalog if item["enabled"]],
         )
     return UserPreferenceOut(
+        lang=_preferred_lang(pref, None),
         max_per_day=pref.max_per_day,
         channel_email=pref.channel_email,
         email=pref.email,
@@ -133,6 +148,9 @@ async def update_my_preferences(
             pref = canonical_pref
 
     pref.max_per_day = body.max_per_day
+    lang = _normalize_lang(body.lang)
+    if lang:
+        pref.lang = lang
     if body.channel_email is not None:
         pref.channel_email = body.channel_email
     if body.email is not None:
@@ -152,6 +170,7 @@ async def update_my_preferences(
     await db.refresh(pref)
     catalog = _notification_catalog(pref, None)
     return UserPreferenceOut(
+        lang=_preferred_lang(pref, None),
         max_per_day=pref.max_per_day,
         channel_email=pref.channel_email,
         email=pref.email,
