@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.6.3 (2026-07-10)
+
+### Bug Fixes
+
+- Notification languages and notification enabling
+  ([`998c3be`](https://github.com/celine-eu/nudging-tool/commit/998c3bed2431f5e2c6140f7c8296a9f05740f7ef))
+
+
 ## v1.6.2 (2026-07-02)
 
 ### Bug Fixes
