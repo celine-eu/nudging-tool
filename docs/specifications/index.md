@@ -31,7 +31,7 @@ async def test_another_participant_s_notification_is_not_found(other_user_client
     """@verifies REQ-0055"""
 ```
 
-The mapping is a projection of the two and is never written by hand. `.agents/harness.toml`
+The mapping is a projection of the two and is never written by hand. the harness profile
 names no traceability provider, so until the harness checker is available in this
 checkout the projection is a grep — `--include='*.py'` because `__pycache__` matches
 otherwise:
@@ -78,5 +78,5 @@ Uncovered by the suite, and therefore unverified whatever this document says:
 
 - **Why** a choice was made — [`docs/decisions/`](../decisions/index.md).
 - What the system *is* — [`docs/architecture.md`](../architecture.md).
-- A trap that is true of the code and not obvious from it — `.agents/knowledge/`.
+- A trap that is true of the code and not obvious from it — the companion's knowledge.
 - Anything broken — the issue tracker.

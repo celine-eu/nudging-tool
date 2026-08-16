@@ -79,7 +79,7 @@ Every test declares the requirement it covers with `@verifies REQ-####`, and the
 requirements are in [`docs/specifications/`](specifications/index.md). Adding behaviour
 means adding a requirement and a test naming it, in the same change.
 
-The procedure, the fixtures and the traps are in `.agents/playbooks/testing.md`.
+The procedure, the fixtures and the traps are in the companion's testing playbook.
 
 ## Project Layout
 
