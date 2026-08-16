@@ -1,5 +1,8 @@
 # Architecture
 
+What the system *is*. What it must **do** is [`docs/specifications/`](specifications/index.md),
+where each statement carries an identifier and a test that names it.
+
 ## Event Flow
 
 The nudging pipeline processes events through sequential stages:
@@ -7,9 +10,9 @@ The nudging pipeline processes events through sequential stages:
 | Stage | Component | Responsibility |
 |---|---|---|
 | 1. Ingestion | `POST /admin/ingest-event` | Validates the incoming event payload |
-| 2. Rule Evaluation | `engine/engine_service.py` | Matches event against rules, runs per-rule Python evaluators, renders messages |
-| 3. Orchestration | `orchestrator/orchestrator.py` | Applies suppression, dedup, frequency limits, user preferences |
-| 4. Delivery | `publishers/web/worker.py`, `publishers/email/worker.py` | Sends web push or email |
+| 2. Rule Evaluation | `src/celine/nudging/engine/engine_service.py` | Matches event against rules, runs per-rule Python evaluators, renders messages |
+| 3. Orchestration | `src/celine/nudging/orchestrator/orchestrator.py` | Applies suppression, dedup, frequency limits, user preferences |
+| 4. Delivery | `src/celine/nudging/publishers/web/worker.py`, `src/celine/nudging/publishers/email/worker.py` | Sends web push or email |
 
 Scheduled events follow the same pipeline but are triggered by the background scheduler instead of direct ingestion.
 
@@ -23,7 +26,8 @@ The engine receives an event and:
 2. Loads each rule's custom Python evaluator from the seed directory
 3. Evaluates whether the rule should fire given the event payload
 4. Applies per-community rule overrides if configured
-5. Renders Jinja2 message templates per channel (web, email) and language
+5. Renders one Jinja2 title and body for the resolved language — **not per channel**: web
+   push and email send the same rendered strings
 
 ### Orchestrator
 
@@ -35,8 +39,8 @@ The orchestrator decides whether and how to deliver a notification:
 
 ### Publishers
 
-- **Web push** (`publishers/web/worker.py`) — sends VAPID-authenticated push via pywebpush
-- **Email** (`publishers/email/worker.py`) — sends via SMTP with TLS/SSL support
+- **Web push** (`src/celine/nudging/publishers/web/worker.py`) — sends VAPID-authenticated push via pywebpush
+- **Email** (`src/celine/nudging/publishers/email/worker.py`) — sends via SMTP with TLS/SSL support
 
 ### Scheduler
 
@@ -50,20 +54,28 @@ PostgreSQL (async via SQLAlchemy + asyncpg):
 |---|---|
 | `rules` | Rule definitions: id, kind, nudge_type, severity, definition (JSONB) |
 | `rule_overrides` | Per-community overrides for rules |
-| `templates` | Jinja2 message templates per rule, channel, language |
+| `templates` | Jinja2 title and body per rule and language, unique on (rule, lang) |
 | `user_preferences` | Per-user preferences: enabled, channels, language, per-kind settings, max_per_day |
 | `nudges_log` | Event processing log |
 | `notifications` | Delivered notifications with read/deleted status |
 | `delivery_log` | Per-channel delivery attempt records |
 | `web_push_subscriptions` | Browser push subscription endpoints per user/community |
-| `scheduled_events` | Future events to be processed at `fire_at` time |
+| `scheduled_events` | Future events to be processed at `trigger_at`, idempotent on `external_key` |
 
 ## Authorization
 
-OPA-enforced via `policies/celine/nudging/authz.rego`:
-- `ingest` action — service accounts with `nudging.ingest` or `nudging.admin` scope
-- `admin` action — service accounts with `nudging.admin` scope
-- User endpoints — JWT-based ownership (notifications/preferences scoped to authenticated user)
+Rego, evaluated **in process** through `celine.sdk.policies` (`regorus`) —
+`policies/celine/nudging/authz.rego`. No OPA server is involved.
+
+- `is_ingest` — the `nudging.ingest` scope, or any administrator
+- `is_admin` — the `nudging.admin` scope, **or** membership of the `admin` group
+  (realm-level or organisation-level)
+- User endpoints — ownership in SQL, matching the token's `sub` *or* its
+  `preferred_username`. The bundle also publishes a `filters` rule, and nothing reads it.
+
+The bundle **fails closed**: the service will not start without it, and an evaluation that
+does not return an explicit `true` denies. See
+[REQ-0003 – REQ-0010](specifications/identity-and-authorisation.md).
 
 ## Stack
 

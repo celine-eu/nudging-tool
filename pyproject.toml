@@ -33,6 +33,15 @@ build-backend = "hatchling.build"
 only-include = ["src/celine/nudging"]
 sources = {"src" = ""}
 
+# The suite reaches no external service: PostgreSQL, Keycloak's JWKS, web push and SMTP
+# are all faked. The Rego bundle is the exception and is deliberately real — it is
+# evaluated in process. See ADR-0002 and .agents/playbooks/testing.md.
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-q"
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

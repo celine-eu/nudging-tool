@@ -41,7 +41,11 @@ Set the generated keys as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` environment
 Rules are stored in `seed/rules/<rule_id>/` directories, each containing:
 - `rule.yaml` — rule definition
 - `evaluate.py` — custom Python evaluator
-- `templates/` — Jinja2 templates per channel and language
+- `templates/<lang>.yaml` — one Jinja2 title and body per language. Templates are **not**
+  per channel: web push and email send the same rendered strings.
+
+The directory name is the rule id, and it is also where the evaluator is looked for — see
+[REQ-0028](specifications/rule-evaluation.md) and [REQ-0068](specifications/seeding.md).
 
 Apply seeds via:
 ```bash
@@ -63,9 +67,19 @@ task alembic:reset                            # reset to base
 ## Running Tests
 
 ```bash
-task test
-# or: uv run pytest -q
+task test                     # uv run pytest
+uv run pytest tests/unit      # the layer without an app
 ```
+
+The suite reaches **no external service** — no PostgreSQL, no Keycloak, no push service,
+no SMTP — so it needs nothing running. The Rego bundle is the exception and is evaluated
+for real, in process; see [ADR-0002](decisions/ADR-0002-the-suite-reaches-no-service.md).
+
+Every test declares the requirement it covers with `@verifies REQ-####`, and the
+requirements are in [`docs/specifications/`](specifications/index.md). Adding behaviour
+means adding a requirement and a test naming it, in the same change.
+
+The procedure, the fixtures and the traps are in `.agents/playbooks/testing.md`.
 
 ## Project Layout
 

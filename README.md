@@ -69,6 +69,8 @@ nudging-cli vapid               # generate VAPID keys
 
 | Document | Description |
 |---|---|
+| [Requirements](docs/specifications/index.md) | What the service must do — each traced to a test |
+| [Decisions](docs/decisions/index.md) | Why the testing and requirement choices were made |
 | [Architecture](docs/architecture.md) | Event flow, engine/orchestrator/publisher, database models |
 | [Engine](docs/engine.md) | Rule evaluation, evaluators, templates, dedup, seed format |
 | [API Reference](docs/api-reference.md) | All endpoints: admin, notifications, preferences, webpush |
