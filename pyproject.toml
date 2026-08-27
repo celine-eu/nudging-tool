@@ -58,13 +58,13 @@ check_untyped_defs = true
 
 [dependency-groups]
 dev = [
-  "python-semantic-release>=10.5.3",
-  "ruff>=0.15.11",
-  "mypy>=1.20.1",
-  "pytest>=9.0.3",
-  "pytest-asyncio>=0.23.0",
+  "python-semantic-release>=10.6.1",
+  "ruff>=0.15.21",
+  "mypy>=2.3.0",
+  "pytest>=9.1.1",
+  "pytest-asyncio>=1.4.0",
   "httpx>=0.28.1",
-  "debugpy>=1.8.19",
+  "debugpy>=1.8.21",
 ]
 
 [tool.semantic_release]
