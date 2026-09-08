@@ -2,6 +2,23 @@
 
 <!-- version list -->
 
+## v1.6.4 (2026-09-08)
+
+### Bug Fixes
+
+- Scheduler survives dedup rollback; pass PEM VAPID key as py_vapid.Vapid; ingest errors honour
+  IngestErrorDetail
+  ([`310926b`](https://github.com/celine-eu/nudging-tool/commit/310926beeaf1cda3a42101f573e4dd83db916977))
+
+### Chores
+
+- Update harness
+  ([`42786ff`](https://github.com/celine-eu/nudging-tool/commit/42786ff731270cda80cbbad37765ff3927d50a97))
+
+- Update workfow image version
+  ([`11eb9bd`](https://github.com/celine-eu/nudging-tool/commit/11eb9bd3ecba6601e11ea4df65f17ae81fca8d4f))
+
+
 ## v1.6.3 (2026-07-10)
 
 ### Bug Fixes

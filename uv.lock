@@ -247,7 +247,7 @@ wheels = [
 
 [[package]]
 name = "celine-nudging"
-version = "1.6.3"
+version = "1.6.4"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
