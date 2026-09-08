@@ -295,6 +295,62 @@ async def test_a_missing_vapid_key_stops_the_send_before_the_subscriptions(
     assert webpush.calls == []
 
 
+# @verifies REQ-0047
+async def test_a_pem_key_reaches_pywebpush_as_a_vapid_instance(db, webpush, monkeypatch):
+    """
+    `pywebpush` reads a string key as base64url raw/DER — a PEM string fails with
+    "Could not deserialize key data" on every send, which is the whole of staging's Web
+    Push history. The worker must hand it the parsed `py_vapid.Vapid` instead.
+    """
+    import py_vapid
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    pem = (
+        ec.generate_private_key(ec.SECP256R1())
+        .private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.TraditionalOpenSSL,
+            serialization.NoEncryption(),
+        )
+        .decode()
+    )
+    monkeypatch.setattr(
+        "celine.nudging.config.settings.settings.VAPID_PRIVATE_KEY", pem
+    )
+    db.add(_subscription("https://push.test/alice"))
+    await db.commit()
+
+    result = await send_webpush(db, _job())
+
+    assert result.status == "sent"
+    assert isinstance(webpush.calls[0]["vapid_private_key"], py_vapid.Vapid)
+
+
+# @verifies REQ-0047
+async def test_an_unusable_key_is_recorded_on_the_delivery_log_not_raised(
+    db, webpush, monkeypatch
+):
+    """
+    A key that will not parse is a configuration fault. Raising it here would surface
+    as HTTP 500 on `/admin/ingest-event` — the "Expecting value" failures every sender
+    logged in staging — and take the ingest down with it.
+    """
+    monkeypatch.setattr(
+        "celine.nudging.config.settings.settings.VAPID_PRIVATE_KEY",
+        "-----BEGIN EC PRIVATE KEY-----\nnot a key\n-----END EC PRIVATE KEY-----\n",
+    )
+    db.add(_subscription("https://push.test/alice"))
+    await db.commit()
+
+    result = await send_webpush(db, _job())
+
+    assert result.status == "failed"
+    assert result.error.startswith("Unusable VAPID_PRIVATE_KEY")
+    assert webpush.calls == []
+    assert (await _delivery_logs(db))[0].status == "failed"
+
+
 # @verifies REQ-0048
 async def test_one_delivery_log_row_per_attempt_naming_the_webpush_channel(db, webpush):
     """

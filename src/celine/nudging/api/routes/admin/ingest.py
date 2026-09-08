@@ -4,7 +4,8 @@ import hashlib
 import logging
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,6 +57,16 @@ def _synthetic_user_id(email_recipients: list[str]) -> str:
     return f"email-ingest:{digest}"
 
 
+def _error_response(status_code: int, payload: dict) -> JSONResponse:
+    """An error body in the shape this route declares: `IngestErrorDetail`, top level.
+
+    `HTTPException(detail=...)` wraps the payload as `{"detail": ...}`, which is not
+    what the OpenAPI contract says — and the generated SDK client, which parses the
+    declared model, raised `KeyError: 'error'` on every 409 and 422 it received.
+    """
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(payload))
+
+
 @router.post(
     "/ingest-event",
     summary="Ingest a Digital Twin event",
@@ -88,16 +99,16 @@ async def ingest_event(
     # --- base contract ---
     facts = evt.facts or {}
     if not facts:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Missing facts in DT event",
+        return _error_response(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            {"error": "missing_facts", "reason": "Missing facts in DT event"},
         )
 
     contract = validate_facts_contract(facts)
     if not contract.ok:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
+        return _error_response(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            {
                 "error": "invalid_facts_contract",
                 "errors": contract.errors,
             },
@@ -106,9 +117,9 @@ async def ingest_event(
     if not evt.user_id:
         email_recipients = _extract_email_recipients(facts)
         if not email_recipients:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={
+            return _error_response(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                {
                     "error": "missing_target",
                     "reason": "user_id_or_email_recipients_required",
                 },
@@ -179,9 +190,9 @@ async def ingest_event(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     if statuses == {EngineResultStatus.SUPPRESSED_DEDUP}:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
+        return _error_response(
+            status.HTTP_409_CONFLICT,
+            {
                 "error": "suppressed",
                 "reason": "all_rules_dedup",
                 "results": [
@@ -192,9 +203,9 @@ async def ingest_event(
         )
 
     if EngineResultStatus.MISSING_FACTS in statuses:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
+        return _error_response(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            {
                 "error": "missing_required_facts",
                 "results": [
                     {"status": r.status, "reason": r.reason, "details": r.details}
@@ -204,9 +215,9 @@ async def ingest_event(
         )
 
     if EngineResultStatus.UNKNOWN_SCENARIO in statuses:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
+        return _error_response(
+            status.HTTP_400_BAD_REQUEST,
+            {
                 "error": "unknown_scenario",
                 "results": [
                     {"status": r.status, "reason": r.reason, "details": r.details}
@@ -215,9 +226,9 @@ async def ingest_event(
             },
         )
 
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail={
+    return _error_response(
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        {
             "error": "no_nudge_created",
             "results": [
                 {"status": r.status, "reason": r.reason, "details": r.details}

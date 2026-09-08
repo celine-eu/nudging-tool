@@ -59,6 +59,7 @@ async def send_test(
     payload = {"title": body.title, "body": body.body, "data": {"url": body.url}}
 
     vapid = get_vapid()
+    signing_key = vapid.signing_key
 
     sent, failed = 0, 0
     for s in subs:
@@ -69,7 +70,7 @@ async def send_test(
                     "keys": {"p256dh": s.p256dh, "auth": s.auth},
                 },
                 data=json.dumps(payload),
-                vapid_private_key=vapid.private_key,
+                vapid_private_key=signing_key,
                 vapid_claims={"sub": vapid.subject},
             )
             sent += 1

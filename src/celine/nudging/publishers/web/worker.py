@@ -77,7 +77,17 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
     elif not subscriptions:
         last_error = "no_subscriptions"
     else:
-        for sub in subscriptions:
+        try:
+            signing_key = vapid.signing_key
+        except ValueError as e:
+            # A key that cannot be parsed is a configuration fault, not a delivery
+            # fault: record it on the delivery log instead of raising through the
+            # ingest request (which is how it surfaced as HTTP 500 in staging).
+            signing_key = None
+            failed = len(subscriptions)
+            last_error = f"Unusable VAPID_PRIVATE_KEY: {e}"
+
+        for sub in subscriptions if signing_key is not None else []:
             try:
                 webpush(
                     subscription_info={
@@ -88,7 +98,7 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
                         },
                     },
                     data=json.dumps(payload),
-                    vapid_private_key=vapid.private_key,
+                    vapid_private_key=signing_key,
                     vapid_claims={"sub": vapid.subject},
                 )
                 sent += 1

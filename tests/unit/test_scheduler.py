@@ -13,7 +13,7 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select
 
-from celine.nudging.db.models import Notification, ScheduledEvent, utc_now
+from celine.nudging.db.models import Notification, NudgeLog, ScheduledEvent, utc_now
 from celine.nudging.scheduler import process_due_scheduled_events, run_scheduler
 from tests.fakes import seed_rule
 
@@ -230,6 +230,66 @@ async def test_a_previous_error_is_cleared_when_a_dispatch_succeeds(db, tmp_path
     await process_due_scheduled_events()
 
     assert (await db.execute(select(ScheduledEvent))).scalar_one().last_error is None
+
+
+# @verifies REQ-0067
+async def test_a_deduplicated_event_does_not_poison_the_rest_of_the_batch(db, tmp_path):
+    """
+    Staging, 2026-07-20 → 2026-09-07: one reminder whose notification already existed
+    blocked every reminder behind it for seven weeks, and wrote a `suppressed_dedup`
+    log row every 30 s while doing so.
+
+    The engine handles a duplicate by rolling the session back — and `Session.rollback()`
+    expires every object loaded in it, the remaining `ScheduledEvent` rows included. The
+    next attribute read on one of those would be a synchronous refresh from inside the
+    event loop, which SQLAlchemy refuses (`MissingGreenlet`), so the poll died before it
+    could commit anything. The scheduler must therefore never read an ORM attribute it
+    loaded before the engine ran, and must mark rows by id.
+    """
+    await _rule(db, tmp_path)
+    db.add(_due(external_key="first", trigger_at=utc_now() - timedelta(minutes=3)))
+    db.add(_due(external_key="duplicate", trigger_at=utc_now() - timedelta(minutes=2)))
+    db.add(
+        _due(
+            external_key="another-day",
+            trigger_at=utc_now() - timedelta(minutes=1),
+            facts={**DAILY, "time": "2026-08-16"},
+        )
+    )
+    await db.commit()
+
+    await process_due_scheduled_events()
+
+    rows = {
+        e.external_key: e
+        for e in (await db.execute(select(ScheduledEvent))).scalars().all()
+    }
+    assert {k: r.status for k, r in rows.items()} == {
+        "first": "dispatched",
+        "duplicate": "dispatched",
+        "another-day": "dispatched",
+    }
+    assert rows["duplicate"].last_error is None
+    assert len((await db.execute(select(Notification))).scalars().all()) == 2
+
+
+# @verifies REQ-0067
+async def test_a_second_poll_does_not_repeat_a_dispatched_event(db, tmp_path):
+    """
+    The failure above showed up as the *same* event being retried every poll. A row
+    that was dispatched must be invisible to the next poll even when a later row in the
+    same batch was deduplicated.
+    """
+    await _rule(db, tmp_path)
+    db.add(_due(external_key="first", trigger_at=utc_now() - timedelta(minutes=2)))
+    db.add(_due(external_key="duplicate", trigger_at=utc_now() - timedelta(minutes=1)))
+    await db.commit()
+
+    await process_due_scheduled_events()
+    await process_due_scheduled_events()
+
+    logs = (await db.execute(select(NudgeLog))).scalars().all()
+    assert [log.status for log in logs].count("suppressed_dedup") == 1
 
 
 # @verifies REQ-0065

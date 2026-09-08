@@ -152,7 +152,7 @@ async def test_a_second_identical_event_answers_409(ingest_client, seeded, webpu
     response = await ingest_client.post("/admin/ingest-event", json=_event())
 
     assert response.status_code == 409
-    detail = response.json()["detail"]
+    detail = response.json()
     assert detail["error"] == "suppressed"
     assert detail["reason"] == "all_rules_dedup"
 
@@ -192,7 +192,7 @@ async def test_an_unknown_scenario_answers_400(ingest_client, seeded):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"]["error"] == "unknown_scenario"
+    assert response.json()["error"] == "unknown_scenario"
 
 
 # @verifies REQ-0011
@@ -202,7 +202,10 @@ async def test_an_event_with_no_facts_answers_422(ingest_client, seeded):
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "Missing facts in DT event"
+    assert response.json() == {
+        "error": "missing_facts",
+        "reason": "Missing facts in DT event",
+    }
 
 
 # @verifies REQ-0012
@@ -219,7 +222,7 @@ async def test_facts_missing_the_contract_answer_422_before_any_rule_runs(
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"]["error"] == "invalid_facts_contract"
+    assert response.json()["error"] == "invalid_facts_contract"
     assert (await db.execute(select(NudgeLog))).scalars().all() == []
 
 
@@ -244,7 +247,7 @@ async def test_a_missing_required_fact_answers_422_with_the_names(
     response = await ingest_client.post("/admin/ingest-event", json=_event())
 
     assert response.status_code == 422
-    detail = response.json()["detail"]
+    detail = response.json()
     assert detail["error"] == "missing_required_facts"
     assert detail["results"][0]["details"] == {"missing": ["delta_pct", "threshold"]}
 
@@ -256,7 +259,7 @@ async def test_an_unusable_time_value_answers_422(ingest_client, seeded):
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"]["results"][0]["reason"] == "missing_or_invalid_time_scope"
+    assert response.json()["results"][0]["reason"] == "missing_or_invalid_time_scope"
 
 
 # ---------------------------------------------------------------------------
@@ -336,7 +339,7 @@ async def test_an_event_with_neither_a_participant_nor_a_recipient_is_422(
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == {
+    assert response.json() == {
         "error": "missing_target",
         "reason": "user_id_or_email_recipients_required",
     }
@@ -410,4 +413,4 @@ async def test_an_event_naming_only_unparseable_addresses_is_422(ingest_client, 
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"]["error"] == "missing_target"
+    assert response.json()["error"] == "missing_target"
