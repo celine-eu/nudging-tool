@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.6.5 (2026-09-08)
+
+### Bug Fixes
+
+- Bump build-and-inspect-python-package to v3.0.1 (twine 7 accepts metadata 2.5)
+  ([`141297a`](https://github.com/celine-eu/nudging-tool/commit/141297a35fc9df87fbadbad1861ce13d96d6b042))
+
+
 ## v1.6.4 (2026-09-08)
 
 ### Bug Fixes
