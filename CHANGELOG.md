@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.6.6 (2026-09-09)
+
+### Bug Fixes
+
+- Dedup without provoking the DB; never log the bearer token
+  ([`08af4b7`](https://github.com/celine-eu/nudging-tool/commit/08af4b7d20145c3bd66860a7050f37a3800f6a39))
+
+
 ## v1.6.5 (2026-09-08)
 
 ### Bug Fixes
