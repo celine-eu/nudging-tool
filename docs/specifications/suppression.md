@@ -41,12 +41,19 @@ ingest.
 ### REQ-0035 — the database is what refuses the duplicate
 
 The `nudges_log.dedup_key` unique constraint. The engine inserts and catches the
-violation; it does not select first, so two workers racing on the same event both compute
-the same key and exactly one insert survives.
+violation, so two workers racing on the same event both compute the same key and exactly
+one insert survives. It *also* looks the key up before inserting: a key that is already
+in the table is refused without provoking the database, because every collision is an
+`ERROR` line in the PostgreSQL log (1,429 a day in staging, September 2026, while the
+digital twin re-sent the same anomalies every five minutes). The lookup is an
+optimisation; the constraint remains the arbiter.
 
 The duplicate is recorded as a `suppressed_dedup` audit row naming the key, and no
 notification is written. That row is the only evidence anywhere in the platform that a
-duplicate was stopped.
+duplicate was stopped. It is written **once per suppressed key** — its own `dedup_key` is
+`suppressed:<key>` — and every later repeat of the same key bumps `details.repeats` and
+`details.last_seen_at` on that row instead of adding one. A sender's retry cadence must
+not become audit-log growth: the stuck scheduler of 2026-07-20 → 09-07 left 141k rows.
 
 **The branch is entered by matching the literal `uq_nudges_dedup_key` in the driver's
 error text.** PostgreSQL puts the constraint name there and SQLite does not, so a rename

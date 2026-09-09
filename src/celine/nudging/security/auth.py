@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Awaitable, Callable
 
+import jwt as pyjwt
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -29,6 +30,25 @@ _OPEN_PATHS: frozenset[str] = frozenset(
         "/notifications/track-click",
     }
 )
+
+
+_DESCRIBED_CLAIMS = ("aud", "azp", "typ", "sub", "exp")
+
+
+def describe_token(auth_header: str) -> str:
+    """The claims that explain a rejection, and nothing that could replay it.
+
+    Decoded *without* verification — the point is to say which audience or token type
+    was presented, not to trust it. The credential itself never reaches the log: a
+    bearer token in Loki is readable by everyone with Grafana access for the whole
+    retention window, which is what happened in staging in September 2026.
+    """
+    token = auth_header.split(" ", 1)[1] if " " in auth_header else auth_header
+    try:
+        claims = pyjwt.decode(token, options={"verify_signature": False})
+    except Exception:
+        return "unparseable token"
+    return " ".join(f"{name}={claims.get(name)}" for name in _DESCRIBED_CLAIMS)
 
 
 def _is_open(path: str) -> bool:
@@ -61,8 +81,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         try:
             user = JwtUser.from_token(auth_header, settings.oidc)
         except Exception as exc:
-            logger.error(f"{auth_header}")
-            logger.warning("JWT validation failed: %s", exc)
+            logger.warning(
+                "JWT validation failed: %s (%s)", exc, describe_token(auth_header)
+            )
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid or expired token"},

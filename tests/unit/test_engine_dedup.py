@@ -286,3 +286,77 @@ async def test_a_notification_copies_the_rule_s_classification(db):
         "opportunity",
         "warning",
     )
+
+
+# ---------------------------------------------------------------------------
+# A duplicate that keeps coming back
+# ---------------------------------------------------------------------------
+
+
+# @verifies REQ-0035
+async def test_a_repeated_duplicate_does_not_grow_the_audit_log(db):
+    """
+    Staging, 2026-09-08 → 09-09: the digital twin re-sends every open `meter_anomaly`
+    on each pipeline run — the same event per user every five minutes — and every one
+    of them added a `suppressed_dedup` row, ~1,400 a day, on top of the 141k the stuck
+    scheduler had already written.
+
+    The first duplicate is recorded, as REQ-0035 requires. Every later one for the same
+    key updates that record — a counter and a last-seen time — instead of adding a row,
+    so the audit log grows with *distinct* suppressions, not with the sender's retry
+    cadence.
+    """
+    await _seed(db)
+
+    results = [await run_engine_batch(_event(), db) for _ in range(5)]
+
+    assert [r[0].status for r in results] == [EngineResultStatus.CREATED] + [
+        EngineResultStatus.SUPPRESSED_DEDUP
+    ] * 4
+    assert all(
+        r[0].details["dedup_key"] == "price_up:user-alice::2026-08-15" for r in results[1:]
+    )
+
+    rows = (await db.execute(select(NudgeLog))).scalars().all()
+    assert sorted(row.status for row in rows) == ["created", "suppressed_dedup"]
+
+    suppressed = next(row for row in rows if row.status == "suppressed_dedup")
+    assert suppressed.dedup_key == "suppressed:price_up:user-alice::2026-08-15"
+    assert suppressed.payload["details"]["dedup_key"] == "price_up:user-alice::2026-08-15"
+    assert suppressed.payload["details"]["repeats"] == 4
+    assert suppressed.payload["details"]["last_seen_at"]
+
+    assert len((await db.execute(select(Notification))).scalars().all()) == 1
+
+
+# @verifies REQ-0035
+async def test_a_known_duplicate_is_refused_without_provoking_the_database(db):
+    """
+    Same incident, seen from PostgreSQL: 1,429 `duplicate key value violates unique
+    constraint "uq_nudges_dedup_key"` errors a day in the server log, one per repeat,
+    because the engine's only way of noticing a duplicate was to collide with it.
+
+    The constraint stays the arbiter — two workers racing on a *new* key still resolve
+    there (the test above this section). But a key that is already in the table is
+    recognised by looking, and looking does not raise.
+    """
+    from sqlalchemy import event
+
+    await _seed(db)
+    await run_engine_batch(_event(), db)
+
+    driver_errors: list[str] = []
+
+    def _record(context):
+        driver_errors.append(str(context.original_exception))
+
+    engine = db.bind.sync_engine
+    event.listen(engine, "handle_error", _record)
+    try:
+        for _ in range(3):
+            results = await run_engine_batch(_event(), db)
+            assert results[0].status is EngineResultStatus.SUPPRESSED_DEDUP
+    finally:
+        event.remove(engine, "handle_error", _record)
+
+    assert driver_errors == []

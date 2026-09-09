@@ -20,6 +20,7 @@ from celine.nudging.db.models import (
     RuleOverride,
     Template,
     UserPreference,
+    utc_now,
 )
 
 from celine.nudging.engine.rules.models import (
@@ -208,6 +209,89 @@ def _attempt_dedup_key(
     # unique key so it won't collide with uq_nudges_dedup_key
     cid = community_id or ""
     return f"attempt:{rule_id}:{user_id}:{cid}:{scope}:{uuid4().hex}"
+
+
+SUPPRESSED_KEY_PREFIX = "suppressed:"
+
+
+def _is_dedup_violation(exc: IntegrityError) -> bool:
+    return "uq_nudges_dedup_key" in str(getattr(exc, "orig", exc))
+
+
+async def _record_suppressed_duplicate(
+    db: AsyncSession,
+    *,
+    dedup_key: str,
+    rule_id: str,
+    user_id: str,
+    community_id: str | None,
+    scenario: str,
+    facts_version: str,
+    facts: dict,
+) -> EngineResult:
+    """One `suppressed_dedup` audit row per suppressed key, however often it repeats.
+
+    The first duplicate inserts the row (REQ-0035: the suppression is recorded). Every
+    later one bumps `details.repeats` and `details.last_seen_at` on that same row, so a
+    sender that retries an already-suppressed event on a schedule — the digital twin
+    re-sends every open `meter_anomaly` on each pipeline run, every five minutes — does
+    not add a row per retry. Staging accumulated 141k such rows before this existed.
+
+    The audit row's own key is deterministic (`suppressed:<dedup_key>`) so that it is
+    found by equality, and so that two workers racing on the *first* repeat resolve on
+    the same unique constraint as everything else.
+    """
+    audit_key = f"{SUPPRESSED_KEY_PREFIX}{dedup_key}"
+    now = utc_now().isoformat()
+
+    async def _existing() -> NudgeLog | None:
+        res = await db.execute(select(NudgeLog).where(NudgeLog.dedup_key == audit_key))
+        return res.scalar_one_or_none()
+
+    row = await _existing()
+    if row is None:
+        db.add(
+            NudgeLog(
+                id=uuid4().hex,
+                rule_id=rule_id,
+                user_id=user_id,
+                community_id=community_id,
+                dedup_key=audit_key,
+                status=EngineResultStatus.SUPPRESSED_DEDUP.value,
+                payload={
+                    "scenario": scenario,
+                    "facts_version": facts_version,
+                    "facts": facts,
+                    "details": {
+                        "reason": "duplicate_in_dedup_window",
+                        "dedup_key": dedup_key,
+                        "repeats": 1,
+                        "last_seen_at": now,
+                    },
+                },
+            )
+        )
+        try:
+            await db.commit()
+        except IntegrityError as exc:
+            await db.rollback()
+            if not _is_dedup_violation(exc):
+                raise
+            row = await _existing()
+
+    if row is not None:
+        details = dict((row.payload or {}).get("details") or {})
+        details["repeats"] = int(details.get("repeats") or 0) + 1
+        details["last_seen_at"] = now
+        # A new dict, not a mutation: SQLAlchemy's JSON column only sees reassignment.
+        row.payload = {**(row.payload or {}), "details": details}
+        await db.commit()
+
+    return EngineResult(
+        status=EngineResultStatus.SUPPRESSED_DEDUP,
+        reason="duplicate_in_dedup_window",
+        details={"dedup_key": dedup_key},
+    )
 
 
 async def _log_status(
@@ -591,6 +675,23 @@ async def _run_single_rule(
     # write log with dedup
     dk = compute_dedup_key(rule_id_str, evt.user_id, evt.community_id, scope)
 
+    # A key that is already there is recognised by looking, not by colliding: the
+    # collision below costs a PostgreSQL ERROR line per repeat (1,429 a day in staging
+    # while the digital twin re-sent the same anomalies every five minutes). The unique
+    # constraint stays the arbiter for two workers racing on a key that is not there yet.
+    already = await db.execute(select(NudgeLog.id).where(NudgeLog.dedup_key == dk))
+    if already.scalar_one_or_none() is not None:
+        return await _record_suppressed_duplicate(
+            db,
+            dedup_key=dk,
+            rule_id=rule_id_str,
+            user_id=user_id,
+            community_id=community_id,
+            scenario=scenario,
+            facts_version=facts_version_str,
+            facts=facts_in,
+        )
+
     try:
         nudge_log = NudgeLog(
             id=nudge.nudge_id,
@@ -625,22 +726,15 @@ async def _run_single_rule(
         error_text = str(getattr(exc, "orig", exc))
         if "uq_nudges_dedup_key" not in error_text:
             raise
-        await _log_status(
+        return await _record_suppressed_duplicate(
             db,
-            status=EngineResultStatus.SUPPRESSED_DEDUP,
+            dedup_key=dk,
             rule_id=rule_id_str,
             user_id=user_id,
             community_id=community_id,
-            scope=scope,
             scenario=scenario,
             facts_version=facts_version_str,
             facts=facts_in,
-            details={"reason": "duplicate_in_dedup_window", "dedup_key": dk},
-        )
-        return EngineResult(
-            status=EngineResultStatus.SUPPRESSED_DEDUP,
-            reason="duplicate_in_dedup_window",
-            details={"dedup_key": dk},
         )
 
     return EngineResult(

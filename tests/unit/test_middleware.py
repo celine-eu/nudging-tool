@@ -97,3 +97,69 @@ async def test_the_click_tracker_is_reachable_without_a_token(client):
         "/notifications/track-click", json={"token": "not.a.token"}
     )
     assert response.status_code == 400
+
+
+# @verifies REQ-0002
+async def test_a_rejected_token_is_never_written_to_the_log(app, caplog):
+    """
+    Staging, 2026-09: every failed validation wrote the whole bearer token at ERROR,
+    which put ~1 KB user credentials into Loki for its 30-day retention, readable by
+    anyone with Grafana access. The log may carry the *unverified* claims that explain
+    a rejection — audience, authorised party, token type, subject — and never the
+    credential itself.
+    """
+    import logging
+
+    import jwt as pyjwt
+    from httpx import ASGITransport, AsyncClient
+
+    token = pyjwt.encode(
+        {"sub": "user-42", "aud": "oauth2_proxy", "azp": "oauth2_proxy", "typ": "ID"},
+        "not-the-realm-key-but-long-enough-for-hs256",
+        algorithm="HS256",
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            headers={"Authorization": f"Bearer {token}"},
+        ) as ac:
+            response = await ac.get("/notifications")
+
+    assert response.status_code == 401
+    assert token not in caplog.text
+    # Not even a segment of it: header, claims and signature are each enough to
+    # reassemble or replay.
+    for segment in token.split("."):
+        assert segment not in caplog.text
+
+    rejected = [r for r in caplog.records if "JWT validation failed" in r.getMessage()]
+    assert len(rejected) == 1
+    assert rejected[0].levelno == logging.WARNING
+    message = rejected[0].getMessage()
+    assert "aud=oauth2_proxy" in message
+    assert "azp=oauth2_proxy" in message
+    assert "typ=ID" in message
+    assert "sub=user-42" in message
+
+
+# @verifies REQ-0002
+async def test_a_token_that_is_not_a_jwt_is_described_without_being_quoted(app, caplog):
+    import logging
+
+    from httpx import ASGITransport, AsyncClient
+
+    with caplog.at_level(logging.DEBUG):
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            headers={"Authorization": "Bearer definitely-not-a-jwt"},
+        ) as ac:
+            response = await ac.get("/notifications")
+
+    assert response.status_code == 401
+    assert "definitely-not-a-jwt" not in caplog.text
+    rejected = [r for r in caplog.records if "JWT validation failed" in r.getMessage()]
+    assert len(rejected) == 1
+    assert "unparseable" in rejected[0].getMessage()
