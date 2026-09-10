@@ -82,6 +82,7 @@ from tests.fakes import (  # noqa: E402
     FakeWebPush,
     install_fake_jwt,
     make_admin,
+    make_analytics_service,
     make_ingest_service,
     make_user,
 )
@@ -317,6 +318,15 @@ async def admin_client(app, fake_jwt):
 async def ingest_client(app, fake_jwt):
     """The service account the four senders use: ingest, but not admin."""
     user = make_ingest_service()
+    fake_jwt.register(user)
+    async with _authed(app, user) as ac:
+        yield ac
+
+
+@pytest.fixture
+async def analytics_client(app, fake_jwt):
+    """The manager BFF service account: aggregate analytics, but not admin."""
+    user = make_analytics_service()
     fake_jwt.register(user)
     async with _authed(app, user) as ac:
         yield ac

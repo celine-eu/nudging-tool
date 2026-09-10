@@ -40,6 +40,19 @@ is_ingest if {
 }
 
 # ---------------------------------------------------------------------------
+# is_analytics: narrow aggregate read scope OR is_admin
+# ---------------------------------------------------------------------------
+default is_analytics := false
+
+is_analytics if {
+    "nudging.analytics.read" in input.subject.scopes
+}
+
+is_analytics if {
+    is_admin
+}
+
+# ---------------------------------------------------------------------------
 # filters: row-level predicate injected for user tokens
 # Service accounts (type == "service") get no filter → see everything.
 # ---------------------------------------------------------------------------

@@ -93,6 +93,10 @@ def make_ingest_service(sub: str = "svc-flexibility") -> JwtUser:
     return make_service(sub=sub, client_id=sub, scope="nudging.ingest")
 
 
+def make_analytics_service(sub: str = "svc-community") -> JwtUser:
+    return make_service(sub=sub, client_id=sub, scope="nudging.analytics.read")
+
+
 class FakeJwt:
     """A token registry standing in for Keycloak.
 
@@ -361,11 +365,13 @@ def make_notification(
     created_at: datetime | None = None,
     read_at: datetime | None = None,
     clicked_at: datetime | None = None,
+    click_action: str | None = None,
     deleted_at: datetime | None = None,
 ) -> Notification:
     return Notification(
         read_at=read_at,
         clicked_at=clicked_at,
+        click_action=click_action,
         deleted_at=deleted_at,
         id=notification_id or uuid4().hex,
         nudge_log_id=nudge_log_id,

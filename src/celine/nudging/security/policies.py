@@ -165,3 +165,20 @@ def require_ingest(
             detail="Insufficient permissions: nudging.ingest scope required",
         )
     return user
+
+
+def require_analytics(
+    user: JwtUser = Depends(get_current_user),
+    engine: CachedPolicyEngine = Depends(get_policy_engine),
+) -> JwtUser:
+    """Raise 403 unless the policy grants aggregate manager analytics access."""
+    policy_input = _make_policy_input(user, action="analytics.read")
+    input_dict = engine._build_input_dict(policy_input)
+    raw = engine.evaluate(f"data.{_POLICY_PACKAGE}.is_analytics", input_dict)
+    if not _extract_bool(raw):
+        logger.warning("Analytics access denied for subject=%s", user.sub)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions: nudging.analytics.read scope required",
+        )
+    return user

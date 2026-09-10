@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -116,6 +116,53 @@ class AdminNotificationOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Manager analytics (aggregate-only)
+# ---------------------------------------------------------------------------
+
+
+class AnalyticsFunnelStep(BaseModel):
+    id: str = Field(..., description="sent | delivered | read | clicked | committed")
+    count: int = Field(..., ge=0)
+
+
+class AnalyticsRuleMetric(BaseModel):
+    id: str
+    name: str
+    family: str
+    channel: str = Field(..., description="webpush | email")
+    severity: str
+    active: bool
+    last_fired_at: datetime | None = None
+    volume: int = Field(..., ge=0)
+    steps: list[AnalyticsFunnelStep]
+
+
+class AnalyticsDeliveryFailure(BaseModel):
+    channel: str = Field(..., description="webpush | email")
+    error_class: str
+    count: int = Field(..., ge=0)
+
+
+class AnalyticsReachability(BaseModel):
+    channel: str = Field(..., description="webpush | email")
+    reachable: int = Field(..., ge=0)
+    total: int = Field(..., ge=0)
+    opted_out: int = Field(..., ge=0)
+
+
+class CommunityNudgingAnalyticsOut(BaseModel):
+    """Privacy-safe, REC-scoped input for the manager dashboard."""
+
+    community_id: str
+    start: date
+    end: date
+    steps: list[AnalyticsFunnelStep]
+    rules: list[AnalyticsRuleMetric]
+    failures: list[AnalyticsDeliveryFailure]
+    reachability: list[AnalyticsReachability]
 
 
 # ---------------------------------------------------------------------------
