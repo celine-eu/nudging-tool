@@ -19,8 +19,8 @@ The exception is an email-only ingest (REQ-0014): a `user_id` beginning `email-i
 together with explicit recipients gets no web job. Both halves are required — recipients
 under a real participant, or a synthetic id with no recipients, still get one.
 
-The web destination is `web:<user>` or `web:<user>:<community>`, and that string is what
-the daily cap counts (REQ-0039), so its shape is load-bearing rather than cosmetic.
+The web destination is `web:<user>` or `web:<user>:<community>`. The daily cap no longer
+reads it: it counts the participant's notifications through their nudges (REQ-0039).
 
 Jobs of one notification share its `nudge_id`, `notification_id` and `dedup_key` and
 differ only in channel, destination and their own id.

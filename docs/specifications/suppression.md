@@ -99,21 +99,25 @@ The cap for a participant with no row is a literal `3` in the orchestrator, **no
 `MAX_PER_DAY_DEFAULT`; that setting only fills in the column for *seeded* rows. The two
 values agree today. Filed as [#36](https://github.com/celine-eu/nudging-tool/issues/36).
 
-### REQ-0039 — the daily cap counts web deliveries sent today to this destination
+### REQ-0039 — the daily cap counts the participant's notifications sent today, on any channel
 
-`sent_today < max_per_day`, where the count is `delivery_log` rows that are `sent`, whose
-`sent_at` is today, and whose destination starts with `web:<user>` or
-`web:<user>:<community>`.
+`sent_today < max_per_day`, where the count is the participant's **notifications** with at
+least one `delivery_log` row that is `sent` and whose `sent_at` is today, whatever the
+channel. A delivery is attributed through its nudge's `user_id`. It counts notifications,
+not deliveries, because the promise on `/preferences` is "at most N a day": one that
+reached both web and email counts once, and an email-only one counts too. Until
+[#37](https://github.com/celine-eu/nudging-tool/issues/37) it counted web deliveries by
+destination prefix, so email was unbounded.
 
 Three narrowings, each a way for the cap to be wrong:
 
 - a suppressed or failed attempt does not consume the allowance;
-- a participant in two communities has two allowances, because the prefix differs — while
-  the community-less prefix is a prefix of both;
-- **an email delivery matches no prefix**, so it neither consumes the allowance nor is
-  checked against it. A participant who opted into email is capped on push and unbounded
-  on email, and email-only ingest is entirely uncapped. Filed as
-  [#37](https://github.com/celine-eu/nudging-tool/issues/37).
+- with a community, only that community's notifications count, so a participant in two
+  communities has two allowances; without one, all of the participant's notifications
+  count;
+- **email-only ingest (REQ-0014) is not capped.** Grid alerts to an operator inbox have no
+  participant and no preference, and suppressing one past a count is a safety risk
+  (requester, 2026-09-29).
 
 The participant-facing bound is 1..10 (`PUT /preferences/me`). The database has no such
 constraint, so a seed can write `0`, which silences that participant completely.

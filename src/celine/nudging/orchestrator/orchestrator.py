@@ -100,6 +100,32 @@ def _build_delivery_jobs(
     return jobs
 
 
+async def _notifications_sent_today(db: AsyncSession, n: NudgeLog) -> int:
+    """How many of this participant's notifications went out today, on any channel.
+
+    The cap is the participant's "at most N a day", so it counts **notifications**:
+    one that reached both web and email counts once, and an email-only one counts too.
+    It used to count web deliveries by destination prefix, which left email unbounded
+    (celine-eu/nudging-tool#37).
+
+    A delivery is attributed through its nudge. With a community, only that community's
+    notifications count, so a participant in two communities has two allowances; without
+    one, every notification of the participant counts.
+    """
+    query = (
+        select(func.count(func.distinct(DeliveryLog.nudge_id)))
+        .join(NudgeLog, NudgeLog.id == DeliveryLog.nudge_id)
+        .where(
+            DeliveryLog.status == "sent",
+            func.date(DeliveryLog.sent_at) == date.today(),
+            NudgeLog.user_id == n.user_id,
+        )
+    )
+    if n.community_id:
+        query = query.where(NudgeLog.community_id == n.community_id)
+    return int((await db.execute(query)).scalar() or 0)
+
+
 async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
     # Load the audit log row (contains rule_id, user_id, dedup_key)
     nudge_log_res = await db.execute(select(NudgeLog).where(NudgeLog.id == nudge_id))
@@ -116,20 +142,12 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
     enabled_kinds = set(get_enabled_notification_kinds(pref))
     rule_kind = await get_rule_kind(db, n.rule_id)
 
-    today = date.today()
-    if n.community_id:
-        dest_prefix = f"web:{n.user_id}:{n.community_id}"
-    else:
-        dest_prefix = f"web:{n.user_id}"
-    cnt_res = await db.execute(
-        select(func.count(DeliveryLog.id)).where(
-            DeliveryLog.status == "sent",
-            DeliveryLog.destination.like(f"{dest_prefix}%"),
-            func.date(DeliveryLog.sent_at) == today,
-        )
-    )
-    sent_today = int(cnt_res.scalar() or 0)
+    sent_today = await _notifications_sent_today(db, n)
     jobs = _build_delivery_jobs(n, notification, pref)
+    # Email-only ingest (grid alerts to an operator inbox) has no participant and so no
+    # preference to honour, and suppressing an alert past a count is a safety risk:
+    # it is not capped (requester, 2026-09-29, celine-eu/nudging-tool#37).
+    capped = not _is_email_only_ingest(n, _explicit_email_recipients(n))
 
     if rule_kind and rule_kind not in enabled_kinds:
         for job in jobs:
@@ -149,7 +167,7 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
         await db.commit()
         return []
 
-    if not can_send_today(sent_today, max_per_day):
+    if capped and not can_send_today(sent_today, max_per_day):
         for job in jobs:
             db.add(
                 DeliveryLog(

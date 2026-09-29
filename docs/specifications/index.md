@@ -7,7 +7,7 @@ These were **distilled from the code, not written before it** — see
 something `nudging-tool` does today and something a reader would want to stay true; none
 is an aspiration.
 
-## Five of them describe a defect
+## Four of them describe a defect
 
 They are written as behaviour anyway, because a requirement that described the *intended*
 behaviour would be an unverified wish, and the trace matrix would report it as covered.
@@ -20,7 +20,6 @@ same change.
 | REQ-0024 | four seeded rules can never fire — their `dedup_window` is not a frequency | [#34](https://github.com/celine-eu/nudging-tool/issues/34) |
 | REQ-0032 | a template variable the facts do not carry renders as an empty string, and is delivered | [#35](https://github.com/celine-eu/nudging-tool/issues/35) |
 | REQ-0038 | `MAX_PER_DAY_DEFAULT` does not apply to a participant with no preference row | [#36](https://github.com/celine-eu/nudging-tool/issues/36) |
-| REQ-0039 | the daily cap counts only web deliveries, so email is unbounded | [#37](https://github.com/celine-eu/nudging-tool/issues/37) |
 
 ## How a requirement is verified
 

@@ -59,6 +59,33 @@ async def _pending(db, *, user_id="user-alice", community_id=None, rule_id="pric
 # ---------------------------------------------------------------------------
 
 
+def _sent(
+    db,
+    *,
+    user_id="user-alice",
+    community_id=None,
+    channels=(("webpush", None),),
+    status="sent",
+    sent_at=None,
+):
+    """A notification of `user_id` delivered on each of `channels` (channel, destination)."""
+    log = make_nudge_log(user_id=user_id, community_id=community_id)
+    db.add(log)
+    when = sent_at or datetime.now(timezone.utc)
+    for index, (channel, destination) in enumerate(channels):
+        db.add(
+            DeliveryLog(
+                id=f"{log.id}-{index}",
+                nudge_id=log.id,
+                channel=channel,
+                destination=destination or f"web:{user_id}",
+                status=status,
+                sent_at=when,
+            )
+        )
+    return log
+
+
 # @verifies REQ-0039
 def test_the_cap_is_a_strict_ceiling():
     """
@@ -92,17 +119,8 @@ async def test_a_participant_with_no_preference_row_gets_the_built_in_default(db
     from celine.nudging.config.settings import settings
 
     log = await _pending(db)
-    for index in range(3):
-        db.add(
-            DeliveryLog(
-                id=f"sent-{index}",
-                nudge_id="other",
-                channel="webpush",
-                destination="web:user-alice",
-                status="sent",
-                sent_at=datetime.now(timezone.utc),
-            )
-        )
+    for _ in range(3):
+        _sent(db)
     await db.commit()
 
     jobs = await orchestrate(db, log.id)
@@ -114,53 +132,65 @@ async def test_a_participant_with_no_preference_row_gets_the_built_in_default(db
 
 
 # @verifies REQ-0039
-async def test_the_cap_counts_only_what_was_sent_today_to_this_destination(db):
+async def test_the_cap_counts_only_this_participant_s_notifications_sent_today(db):
     """
     Three things narrow the count, and each is a way for the cap to be wrong: status
     `sent` (a suppressed or failed attempt does not consume the allowance), the date of
-    `sent_at`, and a `LIKE` on the destination prefix.
+    `sent_at`, and whose notification it was.
     """
     yesterday = datetime.now(timezone.utc) - timedelta(days=1)
-    db.add_all(
-        [
-            DeliveryLog(id="1", nudge_id="n", channel="webpush", destination="web:user-alice", status="sent", sent_at=yesterday),
-            DeliveryLog(id="2", nudge_id="n", channel="webpush", destination="web:user-alice", status="failed", sent_at=datetime.now(timezone.utc)),
-            DeliveryLog(id="3", nudge_id="n", channel="webpush", destination="web:user-bob", status="sent", sent_at=datetime.now(timezone.utc)),
-            DeliveryLog(id="4", nudge_id="n", channel="webpush", destination="web:user-alice", status="sent", sent_at=datetime.now(timezone.utc)),
-        ]
-    )
+    _sent(db, sent_at=yesterday)
+    _sent(db, status="failed")
+    _sent(db, user_id="user-bob")
+    _sent(db)
     db.add(make_preference("user-alice", max_per_day=2))
     log = await _pending(db)
 
     jobs = await orchestrate(db, log.id)
 
-    assert jobs, "one send today against a cap of two still leaves room"
+    assert jobs, "one notification today against a cap of two still leaves room"
 
 
 # @verifies REQ-0039
-async def test_the_destination_prefix_is_per_community(db):
+async def test_the_allowance_is_per_community(db):
     """
-    A participant in two communities has two allowances, because the destination the cap
-    counts is `web:<user>:<community>`. The community-less prefix `web:<user>` is a
-    prefix of both, so a participant with a *global* notification and a community one is
-    counted differently in each direction.
+    A participant in two communities has two allowances: with a community, only that
+    community's notifications count.
     """
     db.add(make_preference("user-alice", community_id="c1", max_per_day=1))
-    db.add(
-        DeliveryLog(
-            id="1",
-            nudge_id="n",
-            channel="webpush",
-            destination="web:user-alice:c2",
-            status="sent",
-            sent_at=datetime.now(timezone.utc),
-        )
-    )
+    _sent(db, community_id="c2")
     log = await _pending(db, community_id="c1")
 
     jobs = await orchestrate(db, log.id)
 
-    assert jobs, "c2's delivery does not consume c1's allowance"
+    assert jobs, "c2's notification does not consume c1's allowance"
+
+
+# @verifies REQ-0039
+async def test_an_email_notification_consumes_the_allowance(db):
+    """
+    celine-eu/nudging-tool#37: the count used to match only `web:` destinations, so a
+    participant who opted into email was capped on push and unbounded on email.
+    """
+    db.add(make_preference("user-alice", max_per_day=1, channel_email=True, email="alice@example.test"))
+    _sent(db, channels=(("email", "alice@example.test"),))
+    log = await _pending(db)
+
+    jobs = await orchestrate(db, log.id)
+
+    assert jobs == [], "the second notification of the day is over a cap of one, email included"
+
+
+# @verifies REQ-0039
+async def test_a_notification_sent_on_two_channels_counts_once(db):
+    """The promise is "at most N notifications a day", not N deliveries."""
+    db.add(make_preference("user-alice", max_per_day=2, channel_email=True, email="alice@example.test"))
+    _sent(db, channels=(("webpush", None), ("email", "alice@example.test")))
+    log = await _pending(db)
+
+    jobs = await orchestrate(db, log.id)
+
+    assert [job.channel for job in jobs] == [Channel.web, Channel.email]
 
 
 # @verifies REQ-0040
@@ -171,16 +201,7 @@ async def test_over_the_cap_every_job_is_logged_suppressed_and_the_notification_
     show a message that was never delivered as though it were waiting.
     """
     db.add(make_preference("user-alice", max_per_day=1, channel_email=True, email="alice@example.test"))
-    db.add(
-        DeliveryLog(
-            id="1",
-            nudge_id="n",
-            channel="webpush",
-            destination="web:user-alice",
-            status="sent",
-            sent_at=datetime.now(timezone.utc),
-        )
-    )
+    _sent(db)
     log = await _pending(db)
 
     jobs = await orchestrate(db, log.id)
@@ -197,32 +218,20 @@ async def test_over_the_cap_every_job_is_logged_suppressed_and_the_notification_
 
 
 # @verifies REQ-0039
-async def test_the_cap_counts_web_deliveries_only_so_email_is_unbounded(db):
+async def test_email_only_ingest_is_not_capped(db):
     """
-    The `LIKE 'web:%'` on the destination means an email delivery never consumes the
-    allowance and never checks it. A participant who opted into email can therefore
-    receive any number of messages a day while their web channel is capped at three.
-
-    Filed as https://github.com/celine-eu/nudging-tool/issues/37. Stated here as
-    behaviour because that is what a reader needs to know today.
+    Grid alerts to an operator inbox have no participant and no preference, and
+    suppressing one past a count is a safety risk (requester, 2026-09-29).
     """
-    db.add(make_preference("user-alice", max_per_day=1, channel_email=True, email="alice@example.test"))
-    for index in range(5):
-        db.add(
-            DeliveryLog(
-                id=f"mail-{index}",
-                nudge_id="n",
-                channel="email",
-                destination="alice@example.test",
-                status="sent",
-                sent_at=datetime.now(timezone.utc),
-            )
-        )
-    log = await _pending(db)
+    recipients = ["operator@example.test"]
+    ingest_user = "email-ingest:0123456789abcdef"
+    for _ in range(5):
+        _sent(db, user_id=ingest_user, channels=(("email", recipients[0]),))
+    log = await _pending(db, user_id=ingest_user, facts={"email_recipients": recipients})
 
     jobs = await orchestrate(db, log.id)
 
-    assert [job.channel for job in jobs] == [Channel.web, Channel.email]
+    assert [job.channel for job in jobs] == [Channel.email]
 
 
 # ---------------------------------------------------------------------------
