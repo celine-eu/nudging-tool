@@ -87,6 +87,8 @@ class Template(Base):
     lang: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
     title_jinja: Mapped[str] = mapped_column(Text, nullable=False)
     body_jinja: Mapped[str] = mapped_column(Text, nullable=False)
+    # Optional HTML alternative for e-mail delivery (rendered with autoescape)
+    html_jinja: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     rule: Mapped["Rule"] = relationship(back_populates="templates")
     __table_args__ = (
@@ -189,6 +191,8 @@ class Notification(Base):
     # Rendered content
     title: Mapped[str] = mapped_column(Text, nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    # HTML alternative of the body, when the template provides one (e-mail only)
+    body_html: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Delivery status: pending | sent | suppressed | failed
     status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)

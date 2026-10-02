@@ -31,6 +31,29 @@ def _event(facts: dict | None = None, **kwargs) -> dict:
     }
 
 
+# @verifies REQ-0079
+async def test_an_html_template_renders_into_the_notification(db, ingest_client):
+    await seed_rule(
+        db,
+        "price_up",
+        title="Price up",
+        body="By {{ delta_pct }}%",
+        html="<p>By <b>{{ delta_pct }}</b>%</p>",
+        definition={
+            "dedup_window": "daily",
+            "scenarios": ["price_up"],
+            "evaluator_path": str(_ALWAYS_TRIGGERS),
+        },
+    )
+
+    response = await ingest_client.post("/admin/ingest-event", json=_event({"delta_pct": 12}))
+
+    assert response.status_code == 200, response.text
+    notification = (await db.execute(select(Notification))).scalar_one()
+    assert notification.body == "By 12%"
+    assert notification.body_html == "<p>By <b>12</b>%</p>"
+
+
 @pytest.fixture
 async def seeded(db):
     """A rule that always triggers, with an English template."""

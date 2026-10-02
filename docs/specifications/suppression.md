@@ -64,17 +64,20 @@ PostgreSQL's wording for that one constraint — see
 
 ### REQ-0036 — a participant receives a kind only if it is in their enabled list
 
-A rule declares `definition.kind`; the orchestrator suppresses the notification when that
-kind is known and not in the participant's enabled list, recording `kind_disabled` on
-every job and marking the notification `suppressed`.
+A rule declares `definition.kind`; the orchestrator suppresses the notification when
+that kind is not in the participant's enabled list, recording `kind_disabled` on every job
+and marking the notification `suppressed`. A kind the catalogue (`active_kinds.yaml`) does
+not list is in nobody's enabled list, so it is **suppressed too**: the catalogue is an
+allow-list, and the ten-odd shipped kinds that are not in it (`kpi_conditions`,
+`static_message`, `price_*`, ...) are not delivered until catalogued.
 
-Two ways a rule escapes this entirely, and both are the current state of the seed:
+Two things escape this:
 
 - a rule with **no kind**, or a blank one, is matched against nothing and always
   delivered;
-- a rule whose kind is **not in `active_kinds.yaml`** is likewise always delivered. The
-  catalogue lists three kinds; ten of the kinds the shipped rules declare are not among
-  them, so most notifications cannot be refused by anyone.
+- the operator kinds in `ALWAYS_DELIVERED_KINDS` (`orchestrator.py`) are always
+  delivered. Today that is only `grid_risk_report`, the DSO grid risk report: an operator
+  report, not a participant preference, so it is deliberately kept out of the catalogue.
 
 A stored consent naming a kind the catalogue no longer lists is dropped rather than
 carried forward.

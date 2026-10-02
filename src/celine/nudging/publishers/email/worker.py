@@ -30,6 +30,9 @@ def _send_email_sync(job: DeliveryJob) -> None:
     msg["From"] = settings.EMAIL_FROM
     msg["To"] = job.destination
     msg.set_content(job.body)
+    if job.body_html:
+        # multipart/alternative — text part first, HTML for clients that render it
+        msg.add_alternative(job.body_html, subtype="html")
 
     if settings.SMTP_USE_SSL:
         with smtplib.SMTP_SSL(

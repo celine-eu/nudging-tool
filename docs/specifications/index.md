@@ -54,11 +54,11 @@ same change.
 | REQ-0011 – REQ-0019 | [ingest](ingest.md) — what a sender must send, and what it is told |
 | REQ-0020 – REQ-0032 | [rule evaluation](rule-evaluation.md) — which rule fires, and what it says |
 | REQ-0033 – REQ-0041 | [suppression](suppression.md) — the decisions not to send |
-| REQ-0042 – REQ-0049 | [delivery](delivery.md) — web push, email, and what is recorded |
+| REQ-0042 – REQ-0049, REQ-0079 | [delivery](delivery.md) — web push, email, and what is recorded |
 | REQ-0050 | [operability](operability.md) — starting, degrading and failing |
 | REQ-0051 – REQ-0062 | [participants](participants.md) — notifications, preferences, subscriptions |
 | REQ-0063 – REQ-0067 | [scheduling](scheduling.md) — events that fire later |
-| REQ-0068 – REQ-0075 | [seeding](seeding.md) — rules, templates and the catalogue |
+| REQ-0068 – REQ-0075, REQ-0080 | [seeding](seeding.md) — rules, templates and the catalogue |
 | REQ-0076 – REQ-0078 | [manager analytics](analytics.md) — privacy-safe REC aggregates for the manager dashboard |
 
 ## What is not covered

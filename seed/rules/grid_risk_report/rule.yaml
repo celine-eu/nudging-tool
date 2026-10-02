@@ -1,0 +1,19 @@
+rules:
+- id: grid_risk_report
+  name: Grid risk report (DSO)
+  enabled: true
+  family: weather
+  type: alert
+  severity: warning
+  version: 1
+  definition:
+    kind: grid_risk_report
+    # `days` (the report body) is checked by the evaluator: it is a list, and the
+    # required-facts check is for scalars the templates print.
+    required_facts:
+    - period
+    - threshold
+    dedup_window: daily
+    scenarios:
+    - grid_risk_report
+    evaluator_path: evaluate.py

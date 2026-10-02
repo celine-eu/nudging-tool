@@ -192,6 +192,7 @@ class SentMail:
     used_tls: bool
     used_ssl: bool
     logged_in: str | None
+    html: str | None = None
 
 
 class FakeSmtp:
@@ -231,14 +232,17 @@ class FakeSmtp:
             def send_message(self, msg: Any) -> None:
                 if outer.fail_with is not None:
                     raise outer.fail_with
+                plain = msg.get_body(preferencelist=("plain",))
+                html = msg.get_body(preferencelist=("html",))
                 outer.sent.append(
                     SentMail(
                         to=msg["To"],
                         subject=msg["Subject"],
-                        body=msg.get_content(),
+                        body=plain.get_content() if plain is not None else "",
                         used_tls=self._tls,
                         used_ssl=self.use_ssl,
                         logged_in=self._login,
+                        html=html.get_content() if html is not None else None,
                     )
                 )
 
@@ -296,6 +300,7 @@ def make_template(
     lang: str = "en",
     title: str = "Title",
     body: str = "Body",
+    html: str | None = None,
 ) -> Template:
     return Template(
         id=f"tpl_{rule_id}_{lang}",
@@ -303,6 +308,7 @@ def make_template(
         lang=lang,
         title_jinja=title,
         body_jinja=body,
+        html_jinja=html,
     )
 
 
@@ -394,12 +400,13 @@ async def seed_rule(
     langs: tuple[str, ...] = ("en",),
     title: str = "Title",
     body: str = "Body",
+    html: str | None = None,
     **rule_kwargs: Any,
 ) -> Rule:
     """A rule and its templates, committed. The pairing is what the engine needs."""
     rule = make_rule(rule_id, **rule_kwargs)
     db.add(rule)
     for lang in langs:
-        db.add(make_template(rule_id, lang=lang, title=title, body=body))
+        db.add(make_template(rule_id, lang=lang, title=title, body=body, html=html))
     await db.commit()
     return rule

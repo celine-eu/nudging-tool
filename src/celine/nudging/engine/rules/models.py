@@ -44,4 +44,5 @@ class NudgeEvent(BaseModel):
     render_context: Dict[str, Any] = Field(default_factory=dict)
     title: str
     body: str
+    body_html: str | None = None
     created_at: datetime = Field(default_factory=utc_now)

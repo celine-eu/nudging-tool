@@ -29,7 +29,7 @@ from celine.nudging.engine.rules.models import (
     NudgeSeverity,
     NudgeType,
 )
-from celine.nudging.engine.templates.renderer import render
+from celine.nudging.engine.templates.renderer import render, render_html
 from celine.nudging.engine.rules.evaluators import evaluate_rule
 
 NON_ENERGY_FAMILIES: set[str] = {
@@ -658,6 +658,7 @@ async def _run_single_rule(
         **facts,
     }
     title, body = render(tmpl.title_jinja, tmpl.body_jinja, ctx)
+    body_html = render_html(getattr(tmpl, "html_jinja", None), ctx)
 
     nudge = NudgeEvent(
         nudge_id=uuid4().hex,
@@ -670,6 +671,7 @@ async def _run_single_rule(
         render_context=ctx,
         title=title,
         body=body,
+        body_html=body_html,
     )
 
     # write log with dedup
@@ -716,6 +718,7 @@ async def _run_single_rule(
             severity=nudge.severity.value,
             title=nudge.title,
             body=nudge.body,
+            body_html=nudge.body_html,
             status="pending",
         )
         db.add(nudge_log)

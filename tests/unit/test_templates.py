@@ -16,7 +16,7 @@ from sqlalchemy import select
 from celine.nudging.db.models import Notification
 from celine.nudging.engine.engine_service import run_engine_batch
 from celine.nudging.engine.rules.models import DigitalTwinEvent
-from celine.nudging.engine.templates.renderer import render
+from celine.nudging.engine.templates.renderer import render, render_html
 from tests.fakes import seed_rule
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -103,6 +103,26 @@ def test_nothing_is_escaped():
 
     assert title == "<b>bold</b> & <script>"
     assert body == "<b>bold</b> & <script>"
+
+
+# @verifies REQ-0080
+def test_the_html_body_is_rendered_with_autoescape_from_the_same_context():
+    """
+    The plain body is delivered as `text/plain`, so nothing there is markup a reader
+    runs. The HTML alternative is, which is why its renderer escapes every value —
+    a line name with an angle bracket is text in the table, not a tag.
+    """
+    html = render_html(
+        "<ul>{% for l in lines %}<li>{{ l.name }}: {{ l.km }}</li>{% endfor %}</ul>",
+        {"lines": [{"name": "<b>A</b> & C", "km": 1.5}]},
+    )
+
+    assert html == "<ul><li>&lt;b&gt;A&lt;/b&gt; &amp; C: 1.5</li></ul>"
+
+
+# @verifies REQ-0080
+def test_a_template_with_no_html_body_yields_none():
+    assert render_html(None, {"v": 1}) is None
 
 
 # @verifies REQ-0032
@@ -233,6 +253,8 @@ def _seeded_templates() -> list[tuple[Path, str, str]]:
         for item in _yaml_items(path):
             if isinstance(item, dict) and "title_jinja" in item:
                 out.append((path, item["title_jinja"], item["body_jinja"]))
+                if item.get("html_jinja"):
+                    out.append((path, item["title_jinja"], item["html_jinja"]))
     return out
 
 

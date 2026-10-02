@@ -11,11 +11,18 @@ from celine.nudging.db.models import DeliveryLog, Notification, NudgeLog, utc_no
 from celine.nudging.orchestrator.models import Channel, DeliveryJob
 from celine.nudging.orchestrator.policies import can_send_today
 from celine.nudging.orchestrator.preferences import (
+    get_active_notification_kinds,
     get_enabled_notification_kinds,
     get_rule_kind,
     get_user_pref,
 )
 from celine.nudging.publishers.registry import get_publisher
+
+# Operator kinds delivered to every recipient regardless of the participant's enabled list
+# (REQ-0036). `grid_risk_report` is a DSO operator report, not a participant preference,
+# so it must not appear in the participant catalogue (active_kinds.yaml); every other
+# uncatalogued kind is suppressed.
+ALWAYS_DELIVERED_KINDS: frozenset[str] = frozenset({"grid_risk_report"})
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -93,6 +100,7 @@ def _build_delivery_jobs(
                 destination=recipient,
                 title=notification.title,
                 body=notification.body,
+                body_html=getattr(notification, "body_html", None),
                 dedup_key=n.dedup_key,
             )
         )
@@ -139,7 +147,8 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
 
     pref = await get_user_pref(db, n.user_id, n.community_id)
     max_per_day = pref.max_per_day if pref else 3
-    enabled_kinds = set(get_enabled_notification_kinds(pref))
+    active_kinds = get_active_notification_kinds()
+    enabled_kinds = set(get_enabled_notification_kinds(pref, active_kinds))
     rule_kind = await get_rule_kind(db, n.rule_id)
 
     sent_today = await _notifications_sent_today(db, n)
@@ -149,7 +158,13 @@ async def orchestrate(db: AsyncSession, nudge_id: str) -> list[DeliveryJob]:
     # it is not capped (requester, 2026-09-29, celine-eu/nudging-tool#37).
     capped = not _is_email_only_ingest(n, _explicit_email_recipients(n))
 
-    if rule_kind and rule_kind not in enabled_kinds:
+    # A kind outside the participant's enabled list is suppressed, uncatalogued ones
+    # included (REQ-0036); only the explicit operator kinds are exempt.
+    if (
+        rule_kind
+        and rule_kind not in ALWAYS_DELIVERED_KINDS
+        and rule_kind not in enabled_kinds
+    ):
         for job in jobs:
             db.add(
                 DeliveryLog(

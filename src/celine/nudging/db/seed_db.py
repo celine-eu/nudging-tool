@@ -69,6 +69,7 @@ async def upsert_template(db: AsyncSession, t: dict):
     obj.lang = lang
     obj.title_jinja = t["title_jinja"]
     obj.body_jinja = t["body_jinja"]
+    obj.html_jinja = t.get("html_jinja") or None
 
 
 async def upsert_preference(db: AsyncSession, p: dict):

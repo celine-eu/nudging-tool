@@ -100,3 +100,11 @@ and an `op` drawn from `< <= > >= == !=`.
 An unknown language reads in English; a kind with no English entry falls back to its first
 translation. A guess, but a label in the wrong language beats an empty one on a
 preferences screen.
+
+### REQ-0080 — a template may carry an optional `html_jinja`, rendered with autoescape from the same context
+
+`templates/<lang>.yaml` accepts `html_jinja` beside `title_jinja` and `body_jinja`; a
+template without it is loaded unchanged (the key is absent, not null). The HTML body is
+rendered from the same context as the text body, but through an autoescaping environment:
+a value with an angle bracket is text in the table, never a tag. The plain body keeps
+REQ-0032's no-escape behaviour.

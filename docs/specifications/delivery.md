@@ -98,10 +98,18 @@ than by channel.
 
 ### REQ-0049 — email is `text/plain`, over STARTTLS unless SSL is configured
 
-Subject is the rendered title, body the rendered body. `SMTP_USE_SSL` selects implicit
+Subject is the rendered title, body the rendered body (an HTML alternative may ride
+along — REQ-0079 — but the text part is always there). `SMTP_USE_SSL` selects implicit
 TLS and makes `SMTP_USE_TLS` irrelevant; the default is STARTTLS on port 587. With no
 `SMTP_USERNAME` the login step is skipped rather than attempted empty — an
 unauthenticated relay is a supported configuration.
 
 Every exception is caught and recorded, so one channel failing never stops the other from
 being tried.
+
+### REQ-0079 — a template's HTML body is sent as a `multipart/alternative` beside the text
+
+When the template carries `html_jinja`, the e-mail is `multipart/alternative` with the
+rendered text part first and the rendered HTML part second; the notification stores the
+rendered HTML in `body_html`. Without `html_jinja` nothing changes: the message is the
+`text/plain` of REQ-0049 and `body_html` is null. Web push never carries the HTML.

@@ -110,7 +110,8 @@ never sees the i18n maps.
 An update stores only kinds the catalogue lists, so an invented kind does not poison the
 row, and appends every non-editable kind whether or not it was sent (REQ-0037).
 
-What the catalogue does *not* list cannot be refused at all (REQ-0036).
+What the catalogue does *not* list is suppressed, except the operator kinds the
+orchestrator always delivers (REQ-0036).
 
 ## Subscriptions
 

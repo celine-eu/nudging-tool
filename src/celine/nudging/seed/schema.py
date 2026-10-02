@@ -37,6 +37,8 @@ class TemplateSeed(BaseModel):
     lang: str = "en"
     title_jinja: str
     body_jinja: str
+    # Optional HTML alternative for the e-mail channel; rendered with autoescape.
+    html_jinja: Optional[str] = None
     # Optional content version for editorial tracking (not persisted in DB yet).
     content_version: Optional[int] = None
 

@@ -92,6 +92,31 @@ def test_a_rule_is_a_directory_and_its_directory_name_is_its_id(tmp_path):
 
 
 # @verifies REQ-0068
+# @verifies REQ-0080
+def test_a_template_may_carry_an_html_body(tmp_path):
+    """
+    `html_jinja` is optional beside `title_jinja` / `body_jinja`; a template without it
+    is unchanged (the key is absent, not `None`), so the e-mail stays plain text.
+    """
+    seed_dir = _seed_dir(tmp_path)
+    _write_rule(
+        seed_dir,
+        "flexibility_opportunity",
+        _rule_payload(),
+        templates={
+            "it": {"title_jinja": "T", "body_jinja": "B", "html_jinja": "<p>B</p>"},
+            "en": {"title_jinja": "T", "body_jinja": "B"},
+        },
+    )
+
+    seed = load_seed_dir(seed_dir)
+    by_lang = {t["lang"]: t for t in seed.templates}
+
+    assert by_lang["it"]["html_jinja"] == "<p>B</p>"
+    assert "html_jinja" not in by_lang["en"]
+    validate_seed(seed)
+
+
 def test_a_template_takes_its_rule_and_language_from_where_it_sits(tmp_path):
     """
     `templates/<lang>.yaml` beside the rule: the filename is the language and the parent
@@ -328,6 +353,10 @@ def test_most_shipped_rules_are_of_a_kind_no_participant_can_switch_off():
     That is a product decision nobody wrote down, and it is the reason this list is
     pinned: adding a rule of a new kind is a decision about whether it can be refused,
     and this test is where that decision has to be made explicitly.
+
+    `grid_risk_report` (2026-09) is deliberately uncatalogued: it is an operational
+    report for a grid operator's inbox, addressed to synthetic e-mail users that have no
+    preferences to refuse it with.
     """
     seed = load_seed_dir(_REPO_ROOT / "seed")
     catalogued = {kind["kind"] for kind in seed.active_kinds}
@@ -344,6 +373,7 @@ def test_most_shipped_rules_are_of_a_kind_no_participant_can_switch_off():
     assert always_delivered == [
         "commitment_settled",
         "flexibility_committed",
+        "grid_risk_report",
         "imported_down",
         "imported_up",
         "kpi_conditions",

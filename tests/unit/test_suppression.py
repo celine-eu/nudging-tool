@@ -344,6 +344,68 @@ async def test_the_kind_comes_from_the_rule_s_definition(db):
 
 
 # @verifies REQ-0036
+async def test_a_rule_of_an_uncatalogued_kind_is_suppressed(db):
+    """
+    A kind the catalogue does not list is in nobody's enabled list, so it is suppressed
+    with `kind_disabled`, exactly as before the operator exemption existed. Pinned because
+    widening the check to "only catalogued kinds can be refused" would start delivering
+    every uncatalogued shipped rule (kpi_conditions, static_message, price_*, ...).
+    """
+    db.add(make_rule("kpi_rule", definition={"kind": "kpi_conditions"}))
+    db.add(
+        make_preference(
+            "user-alice", consents={"enabled_notification_kinds": ["flexibility_opportunity"]}
+        )
+    )
+    log = await _pending(db, rule_id="kpi_rule")
+
+    jobs = await orchestrate(db, log.id)
+
+    assert jobs == []
+    delivery = (await db.execute(select(DeliveryLog))).scalars().all()
+    assert [row.error for row in delivery] == ["kind_disabled"]
+    assert (await db.execute(select(Notification))).scalar_one().status == "suppressed"
+
+
+# @verifies REQ-0036
+async def test_the_grid_risk_report_is_delivered_though_it_is_uncatalogued(db, webpush):
+    """
+    The DSO grid risk report is an operator report, not a participant preference: it is
+    not in the catalogue, yet it is always delivered (ALWAYS_DELIVERED_KINDS).
+    """
+    db.add(make_rule("grid_report_rule", definition={"kind": "grid_risk_report"}))
+    db.add(
+        make_preference(
+            "user-alice", consents={"enabled_notification_kinds": ["flexibility_opportunity"]}
+        )
+    )
+    log = await _pending(db, rule_id="grid_report_rule")
+
+    jobs = await orchestrate(db, log.id)
+
+    assert jobs != []
+    delivery = (await db.execute(select(DeliveryLog))).scalars().all()
+    assert "kind_disabled" not in [row.error for row in delivery]
+    assert (await db.execute(select(Notification))).scalar_one().status != "suppressed"
+
+
+# @verifies REQ-0036
+async def test_a_catalogued_kind_the_participant_enabled_is_delivered(db, webpush):
+    db.add(make_rule("meter_anomaly_rule", definition={"kind": "meter_anomaly"}))
+    db.add(
+        make_preference(
+            "user-alice", consents={"enabled_notification_kinds": ["meter_anomaly"]}
+        )
+    )
+    log = await _pending(db, rule_id="meter_anomaly_rule")
+
+    jobs = await orchestrate(db, log.id)
+
+    assert jobs != []
+    assert (await db.execute(select(Notification))).scalar_one().status != "suppressed"
+
+
+# @verifies REQ-0036
 async def test_a_notification_of_a_disabled_kind_is_suppressed_and_recorded(db):
     """
     @verifies REQ-0041

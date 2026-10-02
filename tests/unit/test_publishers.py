@@ -393,6 +393,29 @@ async def test_an_email_carries_the_title_as_its_subject_and_the_body_as_text(db
     ]
 
 
+# @verifies REQ-0079
+async def test_an_html_body_is_sent_as_an_alternative_beside_the_text(db, smtp):
+    """
+    `multipart/alternative`, text part first: a client that cannot render HTML shows the
+    plain body, and a spam filter that scores HTML-only mail has a text part to read.
+    """
+    job = _job(channel=Channel.email, destination="alice@example.test")
+    job = job.model_copy(update={"body_html": "<p><b>Body</b></p>"})
+
+    result = await send_email(db, job)
+
+    assert result.status == "sent"
+    assert smtp.sent[0].body.strip() == "Body"
+    assert smtp.sent[0].html.strip() == "<p><b>Body</b></p>"
+
+
+# @verifies REQ-0079
+async def test_without_an_html_body_the_email_stays_plain_text(db, smtp):
+    await send_email(db, _job(channel=Channel.email, destination="alice@example.test"))
+
+    assert smtp.sent[0].html is None
+
+
 # @verifies REQ-0049
 async def test_starttls_is_used_unless_ssl_is_configured(db, smtp, monkeypatch):
     """

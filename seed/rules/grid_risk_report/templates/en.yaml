@@ -1,0 +1,50 @@
+title_jinja: "[CELINE] MV grid risk — {{ period }} (threshold {{ threshold }})"
+body_jinja: |
+  MV grid risk report — from {{ period }}{% if dates %} to {{ dates[-1] }}{% endif %} (threshold {{ threshold }})
+  {% macro n(v) %}{{ '-' if v is none else v }}{% endmacro %}{% for day in days %}
+  == {{ day.date }} =={% for v in day.vectors %}
+  {{ 'Wind' if v.risk_vector == 'wind' else 'Heat' }}: {{ n(v.totals.km_alert) }} km ALERT, {{ n(v.totals.km_warning) }} km WARNING of {{ n(v.totals.km_total) }} km (index {{ n(v.totals.risk_index) }}, level {{ v.totals.worst_level }})
+  Operational units:{% for u in v.units %}
+    - {{ u.operational_unit or '-' }}: index {{ n(u.risk_index) }}, {{ n(u.km_alert) }} km ALERT ({{ n(u.pct_alert) }}%), {{ n(u.km_warning) }} km WARNING ({{ n(u.pct_warning) }}%) of {{ n(u.km_total) }} km{% if u.worst_lines %} — lines: {{ u.worst_lines | join(', ') }}{% endif %}{% endfor %}
+  Most exposed lines:{% for l in v.top_lines %}
+    - {{ l.line_name }} ({{ l.operational_units | join('/') }}): index {{ n(l.risk_index) }}, {{ n(l.km_alert) }} km ALERT, {{ n(l.km_warning) }} km WARNING of {{ n(l.km_total) }} km — {{ l.worst_level }}{% else %}
+    - no line at the requested level{% endfor %}
+  {% endfor %}{% endfor %}
+  Full table: {{ app_url }}/table?date={{ period }}
+  Index = 100 · (km ALERT + ½ km WARNING) / total km of the line type exposed to the risk.
+html_jinja: |
+  {% macro n(v) %}{{ '-' if v is none else v }}{% endmacro %}
+  {% set colors = {'ALERT': '#D00000', 'WARNING': '#F7D000', 'NORMAL': '#00A000'} %}
+  <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e293b">
+    <h2 style="font-size:16px;margin:0 0 4px">MV grid risk report</h2>
+    <p style="margin:0 0 12px;color:#64748b">From {{ period }}{% if dates %} to {{ dates[-1] }}{% endif %} · threshold {{ threshold }} · network {{ network_id }}</p>
+    {% for day in days %}
+    <h3 style="font-size:14px;margin:16px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:4px">{{ day.date }}</h3>
+    {% for v in day.vectors %}
+    <p style="margin:6px 0"><strong>{{ 'Wind' if v.risk_vector == 'wind' else 'Heat' }}</strong> —
+      {{ n(v.totals.km_alert) }} km ALERT, {{ n(v.totals.km_warning) }} km WARNING of {{ n(v.totals.km_total) }} km ·
+      index <strong>{{ n(v.totals.risk_index) }}</strong> ·
+      <span style="background:{{ colors.get(v.totals.worst_level, '#808080') }};color:#fff;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700">{{ v.totals.worst_level }}</span></p>
+    <table cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:12px;width:100%;max-width:760px">
+      <thead><tr style="background:#f8fafc;color:#64748b;text-align:left">
+        <th style="border-bottom:1px solid #e2e8f0">Operational unit</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">km total</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">km ALERT</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">% ALERT</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">km WARNING</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">% WARNING</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">Index</th><th style="border-bottom:1px solid #e2e8f0">Level</th><th style="border-bottom:1px solid #e2e8f0">Worst lines</th>
+      </tr></thead>
+      <tbody>{% for u in v.units %}
+        <tr><td style="border-bottom:1px solid #f1f5f9"><strong>{{ u.operational_unit or '-' }}</strong></td><td style="border-bottom:1px solid #f1f5f9;text-align:right">{{ n(u.km_total) }}</td><td style="border-bottom:1px solid #f1f5f9;text-align:right;color:#D00000">{{ n(u.km_alert) }}</td><td style="border-bottom:1px solid #f1f5f9;text-align:right">{{ n(u.pct_alert) }}%</td><td style="border-bottom:1px solid #f1f5f9;text-align:right;color:#b45309">{{ n(u.km_warning) }}</td><td style="border-bottom:1px solid #f1f5f9;text-align:right">{{ n(u.pct_warning) }}%</td><td style="border-bottom:1px solid #f1f5f9;text-align:right"><strong>{{ n(u.risk_index) }}</strong></td><td style="border-bottom:1px solid #f1f5f9"><span style="background:{{ colors.get(u.worst_level, '#808080') }};color:#fff;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700">{{ u.worst_level }}</span></td><td style="border-bottom:1px solid #f1f5f9">{{ u.worst_lines | join(', ') }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    <p style="margin:10px 0 4px"><strong>Most exposed lines</strong> (at level ≥ {{ threshold }})</p>
+    {% if v.top_lines %}
+    <table cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:12px;width:100%;max-width:760px">
+      <thead><tr style="background:#f8fafc;color:#64748b;text-align:left">
+        <th style="border-bottom:1px solid #e2e8f0">Line</th><th style="border-bottom:1px solid #e2e8f0">Unit</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">km total</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">km ALERT</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">% ALERT</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">km WARNING</th><th style="border-bottom:1px solid #e2e8f0;text-align:right">Index</th><th style="border-bottom:1px solid #e2e8f0">Level</th>
+      </tr></thead>
+      <tbody>{% for l in v.top_lines %}
+        <tr><td style="border-bottom:1px solid #f1f5f9"><strong>{{ l.line_name }}</strong></td><td style="border-bottom:1px solid #f1f5f9">{{ l.operational_units | join('/') }}</td><td style="border-bottom:1px solid #f1f5f9;text-align:right">{{ n(l.km_total) }}</td><td style="border-bottom:1px solid #f1f5f9;text-align:right;color:#D00000">{{ n(l.km_alert) }}</td><td style="border-bottom:1px solid #f1f5f9;text-align:right">{{ n(l.pct_alert) }}%</td><td style="border-bottom:1px solid #f1f5f9;text-align:right;color:#b45309">{{ n(l.km_warning) }}</td><td style="border-bottom:1px solid #f1f5f9;text-align:right"><strong>{{ n(l.risk_index) }}</strong></td><td style="border-bottom:1px solid #f1f5f9"><span style="background:{{ colors.get(l.worst_level, '#808080') }};color:#fff;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700">{{ l.worst_level }}</span></td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% else %}<p style="margin:0;color:#64748b">No line at the requested level.</p>{% endif %}
+    {% endfor %}{% endfor %}
+    <p style="margin:16px 0 0"><a href="{{ app_url }}/table?date={{ period }}" style="color:#0d9488">Open the full table in the webapp</a></p>
+    <p style="margin:6px 0 0;font-size:11px;color:#64748b">Index = 100 · (km ALERT + ½ km WARNING) / total km of the line type exposed to the risk (overhead for wind, underground for heat).</p>
+  </div>

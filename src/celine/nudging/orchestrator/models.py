@@ -23,5 +23,7 @@ class DeliveryJob(BaseModel):
     destination: str
     title: str
     body: str
+    # HTML alternative, e-mail channel only
+    body_html: str | None = None
     dedup_key: str
     created_at: datetime = Field(default_factory=utc_now)
