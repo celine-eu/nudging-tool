@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v1.7.0 (2026-10-02)
+
+### Bug Fixes
+
+- Review cap limits on email, closes #36
+  ([`28f5170`](https://github.com/celine-eu/nudging-tool/commit/28f5170cdb1e6fa57232fa13199021544b280655))
+
+### Chores
+
+- Upgrade sdk
+  ([`3225f97`](https://github.com/celine-eu/nudging-tool/commit/3225f97b06698fed9144fb68d1b82a9d2f9c7d65))
+
+### Features
+
+- **delivery**: HTML e-mail bodies and grid_risk_report rule; uncatalogued kinds stay suppressed
+  ([`207e323`](https://github.com/celine-eu/nudging-tool/commit/207e323c4c1afefa914c9bf83a122ebeae25ab98))
+
+
 ## v1.6.6 (2026-09-09)
 
 ### Bug Fixes
