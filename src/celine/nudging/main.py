@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from celine.nudging.config.settings import posture_guard, settings
 from celine.nudging.security.auth import AuthMiddleware
 
 from celine.nudging.api.routes.webpush import router as webpush_router
@@ -36,6 +37,10 @@ async def lifespan(app: FastAPI):
 def create_app():
 
     load_dotenv()
+
+    # Before the lifespan touches the policy bundle, the database or the scheduler:
+    # outside CELINE_ENV=dev a development default refuses to start (celine.sdk.posture).
+    posture_guard(settings).enforce()
 
     logger = logging.getLogger(__name__)
 

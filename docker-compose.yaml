@@ -12,6 +12,9 @@ services:
     ports:
       - "8016:8016"
     environment:
+      # No development default: unset is hardened (celine.sdk.posture). Set
+      # CELINE_ENV=dev in the shell or in .env to run with the local defaults.
+      CELINE_ENV: ${CELINE_ENV:-}
       SEED_DIR: /app/seed
       ORCHESTRATOR_URL: http://localhost:8016/nudging
       # VAPID keys — generate with: nudging-cli vapid generate

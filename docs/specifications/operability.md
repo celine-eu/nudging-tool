@@ -24,3 +24,21 @@ deliberate.
 not the seed, not the scheduler — so it is a liveness probe and must not be read as a
 readiness one: a service whose PostgreSQL has gone answers `{"status": "ok"}` and fails
 every request behind it.
+
+### REQ-0081 — outside `CELINE_ENV=dev`, a development default refuses to start
+
+`create_app()` runs the `celine.sdk.posture` guard before the app — and therefore the
+lifespan, the database and the scheduler — exists. Only `CELINE_ENV=dev` relaxes it
+(`ENVIRONMENT` is read when `CELINE_ENV` is empty); unset, `staging`, `prod` or a typo is
+hardened. Hardened, startup raises `InsecureConfiguration` listing every one of:
+
+- `DATABASE_URL` carrying a local-stack password;
+- `CELINE_OIDC_CLIENT_SECRET` empty or equal to the client id (the `svc-nudging` default);
+- `CELINE_OIDC_BASE_URL` / `CELINE_OIDC_JWKS_URI` left on the SDK's local Keycloak default;
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` or `CLICK_TRACKING_SECRET` unset — otherwise they
+  fail only when first used, after the service has come up.
+
+Requiring `CLICK_TRACKING_SECRET` makes the click-token fallback to the VAPID private key a
+development-only path. In dev the same list is one warning and the service starts. The OIDC
+client id, secret and audience are read from `CELINE_OIDC_*`, so the secret can be set
+without code.

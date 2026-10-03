@@ -5,10 +5,13 @@ description = "CELINE Nudging tool"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  # Imported directly (`import jwt`); 2.14 is the floor for the advisories fixed there.
+  "pyjwt>=2.14",
   "aiosqlite>=0.22.1",
   "alembic>=1.18.4",
   "asgi-lifespan>=2.1.0",
   "asyncpg[binary]>=0.31.0",
+  # TODO: raise to the celine-sdk release that ships `celine.sdk.posture` (unreleased).
   "celine-sdk>=1.20.0",
   "fastapi>=0.129.0",
   "httpx>=0.28.1",

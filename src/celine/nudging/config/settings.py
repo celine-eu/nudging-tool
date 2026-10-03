@@ -1,6 +1,8 @@
+import os
 from typing import Dict, List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from celine.sdk.posture import PostureGuard
 from celine.sdk.settings.models import OidcSettings, PoliciesSettings
 
 
@@ -16,10 +18,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Keyword arguments beat the environment in pydantic-settings, so each value is
+    # read from it explicitly: a literal here would silently override
+    # CELINE_OIDC_CLIENT_SECRET in a deployment. The defaults are the local realm's
+    # (secret == client id), which the posture guard refuses outside CELINE_ENV=dev.
     oidc: OidcSettings = OidcSettings(
-        client_id="svc-nudging",
-        client_secret="svc-nudging",
-        audience="svc-nudging",
+        client_id=os.getenv("CELINE_OIDC_CLIENT_ID", "svc-nudging"),
+        client_secret=os.getenv("CELINE_OIDC_CLIENT_SECRET", "svc-nudging"),
+        audience=os.getenv("CELINE_OIDC_AUDIENCE", "svc-nudging"),
     )
     policies: PoliciesSettings = PoliciesSettings()
 
@@ -51,6 +57,41 @@ class Settings(BaseSettings):
 
     # Scenario → Rules mapping (legacy fallback). Prefer rule.definition.scenarios.
     SCENARIO_TO_RULE_IDS: Dict[str, List[str]] = {}
+
+
+
+def posture_guard(settings: Settings, env: str | None = None) -> PostureGuard:
+    """Every development default this service ships, registered for refusal.
+
+    `celine.sdk.posture`: only `CELINE_ENV=dev` relaxes. Anywhere else `enforce()`
+    raises with the complete list; in dev it logs one warning. VAPID and the
+    click-tracking secret otherwise fail only when first used, so a deployment
+    without them would start and then drop every push; outside dev they are
+    required up front. That also makes the click-token fallback to the VAPID
+    private key a dev-only path.
+    """
+    guard = PostureGuard("nudging-api", env=env)
+    guard.forbid_dev_database_url("DATABASE_URL", settings.DATABASE_URL)
+    guard.forbid_secret_equal_to_client_id(
+        "CELINE_OIDC_CLIENT_SECRET", settings.oidc.client_id, settings.oidc.client_secret
+    )
+    guard.require_explicit_oidc(settings.oidc, require_audience=True)
+    guard.require_set(
+        "VAPID_PUBLIC_KEY",
+        settings.VAPID_PUBLIC_KEY,
+        "Generate a key pair (`nudging-cli vapid gen`) and set both halves.",
+    )
+    guard.require_set(
+        "VAPID_PRIVATE_KEY",
+        settings.VAPID_PRIVATE_KEY,
+        "Generate a key pair (`nudging-cli vapid gen`) and set both halves.",
+    )
+    guard.require_set(
+        "CLICK_TRACKING_SECRET",
+        settings.CLICK_TRACKING_SECRET,
+        "Set a dedicated random secret for signing click-tracking tokens.",
+    )
+    return guard
 
 
 settings = Settings()

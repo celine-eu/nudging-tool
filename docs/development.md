@@ -15,6 +15,18 @@ task seed                  # seed rules and templates
 task run                   # start on port 8016
 ```
 
+## Deployment posture
+
+`task run` and `task debug` export `CELINE_ENV=dev`, which is what lets the zero-config
+defaults start. Unset or any other value (`staging`, `prod`, …) is hardened
+(`celine.sdk.posture`), and `create_app()` refuses to start on a local database password, a
+client secret equal to the client id, the SDK's default issuer, or a missing
+`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `CLICK_TRACKING_SECRET` (REQ-0081). In dev the same
+findings are one warning. `CELINE_ENV=staging task run` runs the same entry point hardened.
+
+`celine.sdk.posture` ships in the next celine-sdk release; until then link the local checkout
+(`uv pip install --python .venv/bin/python -e ../celine-sdk`).
+
 ## Taskfile Commands
 
 | Command | Description |

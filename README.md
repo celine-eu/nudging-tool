@@ -39,8 +39,15 @@ task run                     # runs on port 8016
 
 ## Configuration
 
+The service follows `celine.sdk.posture`: **only `CELINE_ENV=dev` accepts the development
+defaults** below (`task run` exports it). Unset, or any other value, is hardened and
+`create_app()` refuses to start while the database password is a local one, the client secret
+equals the client id, the issuer is the SDK's local default, or `VAPID_PUBLIC_KEY`,
+`VAPID_PRIVATE_KEY` or `CLICK_TRACKING_SECRET` is unset — see REQ-0081.
+
 | Variable | Default | Description |
 |---|---|---|
+| `CELINE_ENV` | — (hardened) | `dev` relaxes the posture; `ENVIRONMENT` is read when it is empty |
 | `DATABASE_URL` | `postgresql+asyncpg://...host.docker.internal:15432/nudging` | PostgreSQL async URL |
 | `DEFAULT_LANG` | `en` | Default notification language |
 | `MAX_PER_DAY_DEFAULT` | `3` | Default max notifications per day |
@@ -50,13 +57,14 @@ task run                     # runs on port 8016
 | `VAPID_PUBLIC_KEY` | — | VAPID public key (base64url) |
 | `VAPID_PRIVATE_KEY` | — | VAPID private key (base64url) |
 | `VAPID_SUBJECT` | `mailto:dev@example.com` | VAPID contact URI |
+| `CLICK_TRACKING_SECRET` | — | Signs click-tracking tokens; required outside dev (in dev it falls back to the VAPID private key) |
 | `SMTP_HOST` | — | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP server port |
 | `SMTP_USERNAME` | — | SMTP authentication username |
 | `SMTP_PASSWORD` | — | SMTP authentication password |
 | `SMTP_USE_TLS` | `true` | Use STARTTLS |
 | `EMAIL_FROM` | — | Sender email address |
-| `OIDC__*` | (from celine-sdk) | OIDC settings (audience: `svc-nudging`) |
+| `CELINE_OIDC_*` | (from celine-sdk) | OIDC settings; client id, secret and audience default to `svc-nudging` (dev only) |
 
 ## CLI
 

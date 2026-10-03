@@ -38,6 +38,12 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 # developer's local `.env` out of the suite.
 os.environ["DATABASE_URL"] = "postgresql+asyncpg://test:test@127.0.0.1:1/test"
 
+# The zero-config defaults (client secret == client id, the SDK's local issuer) are
+# accepted only in `CELINE_ENV=dev` (celine.sdk.posture: unset is hardened, and
+# `create_app()` refuses to start). The hardened posture has its own tests in
+# `tests/unit/test_posture.py`, which pass the environment explicitly.
+os.environ.setdefault("CELINE_ENV", "dev")
+
 # `policies_dir` defaults to the relative `./policies`, so the bundle only loads when
 # pytest runs from the repository root. Pin it by absolute path so the suite does not
 # depend on the working directory, and so a missing bundle is a collection error rather
