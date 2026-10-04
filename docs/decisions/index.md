@@ -41,3 +41,4 @@ edited to say something else.
 | [ADR-0001](ADR-0001-requirements-are-read-out-of-the-code.md) | the requirements are read out of the code, and say what it does today |
 | [ADR-0002](ADR-0002-the-suite-reaches-no-service.md) | the suite reaches no service, and the Rego bundle is the exception |
 | [ADR-0003](ADR-0003-the-database-is-real-and-sqlite.md) | the database is real, and it is SQLite |
+| [ADR-0004](ADR-0004-real-tokens-are-an-opt-in-layer.md) | real tokens are an opt-in layer, and the default suite still reaches no service |

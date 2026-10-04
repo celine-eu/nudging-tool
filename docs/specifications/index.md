@@ -50,7 +50,7 @@ same change.
 
 | | |
 |---|---|
-| REQ-0001 – REQ-0010 | [identity and authorisation](identity-and-authorisation.md) — who the caller is and what they may do |
+| REQ-0001 – REQ-0010, REQ-0082 | [identity and authorisation](identity-and-authorisation.md) — who the caller is and what they may do |
 | REQ-0011 – REQ-0019 | [ingest](ingest.md) — what a sender must send, and what it is told |
 | REQ-0020 – REQ-0032 | [rule evaluation](rule-evaluation.md) — which rule fires, and what it says |
 | REQ-0033 – REQ-0041 | [suppression](suppression.md) — the decisions not to send |

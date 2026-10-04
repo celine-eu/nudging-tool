@@ -20,10 +20,17 @@ from celine.nudging.security.policies import (
     _extract_bool,
     _make_policy_input,
     _subject_from_user,
+    policy_input_dict,
     require_admin,
     require_ingest,
 )
-from tests.fakes import make_admin, make_user
+from tests.fakes import (
+    make_admin,
+    make_legacy_realm_admin,
+    make_org_admin,
+    make_platform_admin,
+    make_user,
+)
 
 _PACKAGE = "celine.nudging.authz"
 
@@ -34,9 +41,8 @@ def engine(policy_engine_is_loaded):
 
 
 def _query(engine, user, rule: str, action: str = "access") -> bool:
-    policy_input = _make_policy_input(user, action=action)
     raw = engine.evaluate(
-        f"data.{_PACKAGE}.{rule}", engine._build_input_dict(policy_input)
+        f"data.{_PACKAGE}.{rule}", policy_input_dict(user, action=action)
     )
     return _extract_bool(raw)
 
@@ -118,7 +124,7 @@ def test_a_query_for_a_rule_that_does_not_exist_denies(engine):
     """
     raw = engine.evaluate(
         f"data.{_PACKAGE}.is_superuser",
-        engine._build_input_dict(_make_policy_input(make_admin(), action="admin")),
+        policy_input_dict(make_admin(), action="admin"),
     )
     assert _extract_bool(raw) is False
 
@@ -134,20 +140,78 @@ def test_the_admin_scope_grants_admin(engine):
 
 
 # @verifies REQ-0005
-def test_the_admin_group_grants_admin(engine):
+def test_the_platform_admin_role_grants_admin(engine):
     """
-    Two independent sources, and a participant carries neither. The group is read
-    through `extract_groups`, which also flattens organisation-level groups — so a
-    member of an organisation whose org group is `admin` is an administrator here.
+    Two independent sources, and a participant carries neither: the scope, and the realm
+    role `platform-admin` read from `realm_access.roles`.
     """
-    assert _query(engine, make_admin(by_group=True), "is_admin", "admin") is True
+    assert _query(engine, make_platform_admin(), "is_admin", "admin") is True
+    assert _query(engine, make_admin(by_role=True), "is_admin", "admin") is True
 
 
 # @verifies REQ-0005
-def test_an_organisation_level_admin_group_grants_admin(engine):
-    user = make_user(sub="user-org-admin")
-    user.claims["organization"] = {"celine": {"groups": ["/admin"]}}
-    assert _query(engine, user, "is_admin", "admin") is True
+def test_the_role_reaches_the_bundle_as_subject_roles_and_groups_stay_empty(engine):
+    """
+    The realm roles go into `Subject.roles` and the SDK emits them as `subject.roles`.
+    If `roles=` were dropped from the Subject, `input.subject.roles` would be `[]` and
+    every platform administrator would be denied, which no allow-only test would notice.
+    """
+    subject = policy_input_dict(make_platform_admin(), action="admin")["subject"]
+    assert subject["roles"] == ["platform-admin"]
+    assert subject["groups"] == []
+
+    legacy = policy_input_dict(make_legacy_realm_admin(), action="admin")["subject"]
+    assert legacy["roles"] == ["admin"]
+    assert legacy["groups"] == []
+
+
+# @verifies REQ-0082
+def test_an_organisation_admins_member_is_not_an_admin(engine):
+    """
+    An organisation's `admins` is valid only inside that organisation, and no decision
+    here is about an organisation. Its path, `/admins`, is the same string the retired
+    realm group had, which is why nothing reads paths at all.
+    """
+    assert _query(engine, make_org_admin(), "is_admin", "admin") is False
+    assert _query(engine, make_org_admin(), "is_ingest", "ingest") is False
+    assert _query(engine, make_org_admin(), "is_analytics", "analytics.read") is False
+
+
+# @verifies REQ-0082
+def test_an_organisation_group_named_admin_is_not_an_admin(engine):
+    """Under the old merge this was an administrator; the name is not a grant."""
+    user = make_user(sub="user-org-named-admin", organizations={"example-rec": ["/admin", "admin"]})
+    assert _query(engine, user, "is_admin", "admin") is False
+
+
+# @verifies REQ-0082
+def test_a_retired_realm_group_still_in_a_token_grants_nothing(engine):
+    """
+    A token minted before the realm groups were removed: `/admins`, `admins` and `admin`
+    in `groups`, the realm role `admin` they mapped onto, and an organisation's `admins`.
+    Every name that used to read as "administrator", and none is `platform-admin`.
+    """
+    legacy = make_legacy_realm_admin()
+    assert _query(engine, legacy, "is_admin", "admin") is False
+    assert _query(engine, legacy, "is_ingest", "ingest") is False
+    assert _query(engine, legacy, "is_analytics", "analytics.read") is False
+
+
+# @verifies REQ-0082
+def test_platform_admin_anywhere_but_realm_access_grants_nothing(engine):
+    """
+    Only `realm_access.roles` is the platform level. The same string in the `groups`
+    claim, in an organisation's groups, in a top-level `roles` claim or in a client's
+    `resource_access` roles is not the realm role.
+    """
+    in_groups = make_user(sub="u1", groups=["platform-admin", "/platform-admin"])
+    in_org = make_user(sub="u2", organizations={"example-rec": ["/platform-admin"]})
+    top_level = make_user(sub="u3")
+    top_level.claims["roles"] = ["platform-admin"]
+    client_role = make_user(sub="u4")
+    client_role.claims["resource_access"] = {"svc-nudging": {"roles": ["platform-admin"]}}
+    for user in (in_groups, in_org, top_level, client_role):
+        assert _query(engine, user, "is_admin", "admin") is False, user.sub
 
 
 # @verifies REQ-0007
@@ -189,7 +253,7 @@ def test_an_admin_may_also_ingest(engine):
     token from reading everyone's notifications.
     """
     assert _query(engine, make_admin(), "is_ingest", "ingest") is True
-    assert _query(engine, make_admin(by_group=True), "is_ingest", "ingest") is True
+    assert _query(engine, make_admin(by_role=True), "is_ingest", "ingest") is True
 
 
 # @verifies REQ-0007
@@ -275,14 +339,14 @@ def test_the_bundle_declares_a_row_filter_for_a_user_and_none_for_a_service(engi
     """
     user_filters = engine.evaluate(
         f"data.{_PACKAGE}.filters",
-        engine._build_input_dict(_make_policy_input(make_user(sub="alice"))),
+        policy_input_dict(make_user(sub="alice")),
     )
     value = user_filters["result"][0]["expressions"][0]["value"]
     assert value == [{"field": "user_id", "operator": "eq", "value": "alice"}]
 
     service_filters = engine.evaluate(
         f"data.{_PACKAGE}.filters",
-        engine._build_input_dict(_make_policy_input(make_ingest())),
+        policy_input_dict(make_ingest()),
     )
     assert service_filters["result"][0]["expressions"][0]["value"] == []
 
@@ -310,6 +374,17 @@ def test_require_ingest_raises_403_for_a_participant(engine):
 def test_require_admin_returns_the_caller_when_the_policy_grants_it(engine):
     admin = make_admin()
     assert require_admin(user=admin, engine=engine) is admin
+    platform_admin = make_platform_admin()
+    assert require_admin(user=platform_admin, engine=engine) is platform_admin
+
+
+# @verifies REQ-0082
+def test_require_admin_raises_403_for_an_organisation_admin_and_a_retired_group(engine):
+    for user in (make_org_admin(), make_legacy_realm_admin()):
+        with pytest.raises(HTTPException) as exc:
+            require_admin(user=user, engine=engine)
+        assert exc.value.status_code == 403
+        assert "platform-admin" in exc.value.detail
 
 
 # @verifies REQ-0006

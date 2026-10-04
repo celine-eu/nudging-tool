@@ -25,7 +25,7 @@ router = APIRouter(prefix="/notifications", tags=["admin"])
     summary="List notifications (admin)",
     description=(
         "Admin view of all notifications. Filterable by user_id, family, severity. "
-        "Requires nudging.admin scope or admin group."
+        "Requires nudging.admin scope or platform-admin role."
     ),
 )
 async def admin_list_notifications(

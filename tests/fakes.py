@@ -39,8 +39,15 @@ def make_user(
     preferred_username: str | None = None,
     scope: str = "",
     groups: list[str] | None = None,
+    roles: list[str] | None = None,
+    organizations: dict[str, list[str]] | None = None,
 ) -> JwtUser:
-    """A participant token: no scopes, no groups unless a test asks for them."""
+    """A participant token: no scopes, groups or roles unless a test asks for them.
+
+    `groups` is the retired top-level realm `groups` claim, `roles` is
+    `realm_access.roles`, and `organizations` maps an organisation alias to its
+    `organization.<alias>.groups`, the three shapes Keycloak issues.
+    """
     claims: dict[str, Any] = {
         "sub": sub,
         "scope": scope,
@@ -49,6 +56,13 @@ def make_user(
     }
     if groups:
         claims["groups"] = groups
+    if roles is not None:
+        claims["realm_access"] = {"roles": roles}
+    if organizations:
+        claims["organization"] = {
+            alias: {"type": ["rec"], "groups": org_groups}
+            for alias, org_groups in organizations.items()
+        }
     return JwtUser(
         sub=sub,
         email=email,
@@ -58,11 +72,49 @@ def make_user(
     )
 
 
-def make_admin(sub: str = "user-admin", *, by_group: bool = False) -> JwtUser:
-    """An administrator, by scope or by group — the Rego grants either."""
-    if by_group:
-        return make_user(sub=sub, groups=["admin"])
+def make_admin(sub: str = "user-admin", *, by_role: bool = False) -> JwtUser:
+    """An administrator, by scope or by the `platform-admin` realm role."""
+    if by_role:
+        return make_platform_admin(sub=sub)
     return make_user(sub=sub, scope="nudging.admin")
+
+
+# The three claim shapes of the two-level model, as the local realm issues them through
+# `oauth2_proxy` (`organization:*` requested). Organisation group paths keep their
+# leading slash and look exactly like the retired realm group paths.
+
+
+def make_platform_admin(sub: str = "user-platform-admin") -> JwtUser:
+    """The realm role, held by a user who is also an admin of an organisation."""
+    return make_user(
+        sub=sub,
+        roles=["platform-admin"],
+        organizations={"example-rec": ["/admins"]},
+    )
+
+
+def make_org_admin(sub: str = "user-org-admin") -> JwtUser:
+    """An organisation's `admins` member, not a platform administrator."""
+    return make_user(
+        sub=sub,
+        roles=["default-roles-celine", "offline_access", "uma_authorization"],
+        organizations={"example-rec": ["/admins"]},
+    )
+
+
+def make_legacy_realm_admin(sub: str = "user-legacy-admin") -> JwtUser:
+    """A token minted before the realm groups were retired.
+
+    Realm group `/admins` in both forms the two old mappers wrote, the realm role
+    `admin` it was mapped onto, and an organisation's `admins` on top: every name that
+    used to read as "administrator". None of it is `platform-admin`.
+    """
+    return make_user(
+        sub=sub,
+        groups=["/admins", "admins", "admin"],
+        roles=["admin"],
+        organizations={"example-rec": ["/admins", "/admin"]},
+    )
 
 
 def make_service(

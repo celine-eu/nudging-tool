@@ -4,7 +4,10 @@ Interactive OpenAPI docs: `http://localhost:8016/docs`
 
 ## Admin Routes
 
-All admin routes are under the `/admin` prefix and require service account authentication with appropriate scopes.
+All admin routes are under the `/admin` prefix. A route is allowed by a nudging scope
+(`nudging.admin`, `nudging.ingest`, `nudging.analytics.read`) or by the realm role
+`platform-admin`, the only platform-wide grant. No group grants anything here: neither a
+realm group nor an organisation's own group (REQ-0005, REQ-0082).
 
 ### `POST /admin/ingest-event`
 

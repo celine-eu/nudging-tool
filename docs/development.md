@@ -34,6 +34,7 @@ findings are one warning. `CELINE_ENV=staging task run` runs the same entry poin
 | `task run` | Start dev server on port 8016 |
 | `task debug` | Start with debugger (port 48016) |
 | `task test` | Run pytest |
+| `task test:real-tokens` | Run the opt-in real-token layer against the local Keycloak |
 | `task seed` | Seed rules from `./seed` directory |
 | `task alembic:migrate` | Apply all pending migrations |
 | `task alembic:sync-model` | Generate new Alembic migration |
@@ -86,6 +87,12 @@ uv run pytest tests/unit      # the layer without an app
 The suite reaches **no external service** — no PostgreSQL, no Keycloak, no push service,
 no SMTP — so it needs nothing running. The Rego bundle is the exception and is evaluated
 for real, in process; see [ADR-0002](decisions/ADR-0002-the-suite-reaches-no-service.md).
+
+`tests/integration/` is the one opt-in layer: it mints tokens from the **local** Keycloak,
+verifies them against its JWKS and drives the real middleware and policy. It is skipped
+unless `NUDGING_REAL_TOKENS=1` (`task test:real-tokens`) and refuses a non-local issuer; a
+token still carrying a retired realm group is passed in as `NUDGING_LEGACY_ADMIN_TOKEN`. See
+[ADR-0004](decisions/ADR-0004-real-tokens-are-an-opt-in-layer.md).
 
 Every test declares the requirement it covers with `@verifies REQ-####`, and the
 requirements are in [`docs/specifications/`](specifications/index.md). Adding behaviour

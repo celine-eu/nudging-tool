@@ -14,7 +14,7 @@ from typing import Any
 
 from fastapi import Depends, HTTPException, Request, status
 
-from celine.sdk.auth import JwtUser
+from celine.sdk.auth import JwtUser, realm_roles
 from celine.sdk.policies import (
     Action,
     CachedPolicyEngine,
@@ -34,12 +34,15 @@ logger = logging.getLogger(__name__)
 # Singleton policy engine – initialised once in lifespan
 # ---------------------------------------------------------------------------
 _engine: CachedPolicyEngine | None = None
+# The uncached engine the cached one wraps: its public `build_input_dict` serialises a
+# PolicyInput into the Rego `input` (CachedPolicyEngine has no public equivalent).
+_base_engine: PolicyEngine | None = None
 _POLICY_PACKAGE = "celine.nudging.authz"
 
 
 def init_policy_engine() -> None:
     """Load policies from disk. Call once at application startup."""
-    global _engine
+    global _engine, _base_engine
     policies_dir = settings.policies.policies_dir
     if policies_dir is None:
         raise ValueError("POLICIES_DIR not set")
@@ -49,6 +52,7 @@ def init_policy_engine() -> None:
 
     base = PolicyEngine(policies_dir=policies_dir)
     base.load()
+    _base_engine = base
     _engine = CachedPolicyEngine(
         engine=base,
         cache=DecisionCache(maxsize=10_000, ttl_seconds=300),
@@ -78,17 +82,24 @@ def _scopes_from_user(user: JwtUser) -> list[str]:
     return []
 
 
-def _groups_from_user(user: JwtUser) -> list[str]:
-    from celine.sdk.auth.jwt import extract_groups
-    return extract_groups(user.claims)
+def _roles_from_user(user: JwtUser) -> list[str]:
+    """Platform roles: `realm_access.roles` and nothing else.
+
+    `platform-admin` is the only platform-wide grant. A `groups` claim is never read
+    (realm groups are retired, so one still present in a token grants nothing), and an
+    organisation's own groups are never read either: no decision here is about an
+    organisation.
+    """
+    return realm_roles(user.claims)
 
 
 def _subject_from_user(user: JwtUser) -> Subject:
+    # `groups` stays empty on purpose: see `_roles_from_user`.
     stype = SubjectType.SERVICE if user.is_service_account else SubjectType.USER
     return Subject(
         id=user.sub,
         type=stype,
-        groups=_groups_from_user(user),
+        roles=_roles_from_user(user),
         scopes=_scopes_from_user(user),
         claims=user.claims,
     )
@@ -100,6 +111,19 @@ def _make_policy_input(user: JwtUser, action: str = "access") -> PolicyInput:
         resource=Resource(type=ResourceType.USERDATA, id="nudging"),
         action=Action(name=action),
     )
+
+
+def policy_input_dict(user: JwtUser, action: str = "access") -> dict[str, Any]:
+    """The Rego `input` for one decision, built by the SDK.
+
+    `subject.roles` carries the platform roles (`Subject.roles`, emitted by
+    `PolicyEngine.build_input_dict`); `subject.groups` stays empty.
+    """
+    if _base_engine is None:
+        raise RuntimeError(
+            "Policy engine not initialised (call init_policy_engine() at startup)"
+        )
+    return _base_engine.build_input_dict(_make_policy_input(user, action=action))
 
 
 # ---------------------------------------------------------------------------
@@ -125,14 +149,13 @@ def require_admin(
     engine: CachedPolicyEngine = Depends(get_policy_engine),
 ) -> JwtUser:
     """Raise 403 unless the unified policy grants is_admin for this subject."""
-    policy_input = _make_policy_input(user, action="admin")
-    input_dict = engine._build_input_dict(policy_input)
+    input_dict = policy_input_dict(user, action="admin")
     raw = engine.evaluate(f"data.{_POLICY_PACKAGE}.is_admin", input_dict)
     if not _extract_bool(raw):
         logger.warning("Admin access denied for subject=%s", user.sub)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions: nudging.admin scope or admin group required",
+            detail="Insufficient permissions: nudging.admin scope or platform-admin role required",
         )
     return user
 
@@ -155,8 +178,7 @@ def require_ingest(
     engine: CachedPolicyEngine = Depends(get_policy_engine),
 ) -> JwtUser:
     """Raise 403 unless the policy grants is_ingest for this subject."""
-    policy_input = _make_policy_input(user, action="ingest")
-    input_dict = engine._build_input_dict(policy_input)
+    input_dict = policy_input_dict(user, action="ingest")
     raw = engine.evaluate(f"data.{_POLICY_PACKAGE}.is_ingest", input_dict)
     if not _extract_bool(raw):
         logger.warning("Ingest access denied for subject=%s", user.sub)
@@ -172,8 +194,7 @@ def require_analytics(
     engine: CachedPolicyEngine = Depends(get_policy_engine),
 ) -> JwtUser:
     """Raise 403 unless the policy grants aggregate manager analytics access."""
-    policy_input = _make_policy_input(user, action="analytics.read")
-    input_dict = engine._build_input_dict(policy_input)
+    input_dict = policy_input_dict(user, action="analytics.read")
     raw = engine.evaluate(f"data.{_POLICY_PACKAGE}.is_analytics", input_dict)
     if not _extract_bool(raw):
         logger.warning("Analytics access denied for subject=%s", user.sub)

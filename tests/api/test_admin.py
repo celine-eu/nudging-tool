@@ -12,8 +12,13 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from celine.nudging.db.models import Rule, ScheduledEvent, Template, WebPushSubscription
-from tests.conftest import OTHER_SUB, USER_SUB
-from tests.fakes import make_notification
+from tests.conftest import OTHER_SUB, USER_SUB, _authed
+from tests.fakes import (
+    make_legacy_realm_admin,
+    make_notification,
+    make_org_admin,
+    make_platform_admin,
+)
 
 FUTURE = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
 FACTS = {"facts_version": "1", "scenario": "reminder", "time": "2026-08-15"}
@@ -50,6 +55,32 @@ async def test_a_participant_may_not_read_the_admin_list(user_client, db):
 
     assert response.status_code == 403
     assert "nudging.admin" in response.json()["detail"]
+
+
+# @verifies REQ-0005
+async def test_a_platform_admin_role_holder_reads_the_admin_list(app, fake_jwt, db):
+    db.add(make_notification(notification_id="alice", user_id=USER_SUB))
+    await db.commit()
+    user = fake_jwt.register(make_platform_admin())
+    async with _authed(app, user) as ac:
+        response = await ac.get("/admin/notifications")
+    assert response.status_code == 200
+    assert [n["id"] for n in response.json()] == ["alice"]
+
+
+# @verifies REQ-0082
+async def test_an_organisation_admin_or_a_retired_realm_group_may_not_read_the_admin_list(
+    app, fake_jwt, db
+):
+    """Both sides through HTTP: the route answers `403`, not an empty list."""
+    db.add(make_notification(notification_id="alice", user_id=USER_SUB))
+    await db.commit()
+    for user in (make_org_admin(), make_legacy_realm_admin()):
+        fake_jwt.register(user)
+        async with _authed(app, user) as ac:
+            response = await ac.get("/admin/notifications")
+        assert response.status_code == 403, user.sub
+        assert "platform-admin" in response.json()["detail"]
 
 
 # @verifies REQ-0006

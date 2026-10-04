@@ -14,7 +14,12 @@ allow if {
 }
 
 # ---------------------------------------------------------------------------
-# is_admin: scope nudging.admin  OR  group membership "admin"
+# is_admin: scope nudging.admin  OR  the realm role "platform-admin"
+#
+# The realm role is the only platform-wide grant. No group grants anything here:
+# not a realm group (retired; one still present in a token is ignored) and not an
+# organisation's own group, because no decision in this service is about an
+# organisation. input.subject.roles carries realm_access.roles only.
 # ---------------------------------------------------------------------------
 default is_admin := false
 
@@ -23,7 +28,7 @@ is_admin if {
 }
 
 is_admin if {
-    "admin" in input.subject.groups
+    "platform-admin" in input.subject.roles
 }
 
 # ---------------------------------------------------------------------------

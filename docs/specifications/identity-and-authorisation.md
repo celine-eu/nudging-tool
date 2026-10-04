@@ -48,11 +48,12 @@ a denial.
 
 This is what makes a renamed Rego rule a lockout rather than a hole.
 
-### REQ-0005 — an administrator is one by scope or by group
+### REQ-0005 — an administrator is one by scope or by the platform role
 
-`is_admin` is granted by the `nudging.admin` scope **or** membership of the `admin` group.
-Groups are read with `extract_groups`, which flattens organisation-level groups too, so a
-member of an organisation whose org group is `admin` is an administrator here.
+`is_admin` is granted by the `nudging.admin` scope **or** the realm role
+`platform-admin`. The role is read from `realm_access.roles` only and reaches the bundle as
+`input.subject.roles`; it is the only platform-wide grant there is. What no longer makes an
+administrator is in REQ-0082.
 
 Scopes arrive as a space-separated string or as a list, and both reach the policy as a
 list — a raw string would match nothing under Rego's `in` and would silently demote every
@@ -72,9 +73,9 @@ operator.
 
 ### REQ-0007 — a participant has neither permission
 
-A logged-in participant carries no scope and no group, so every `/admin` route answers
-`403` with a message naming the missing permission. Being a service account grants
-nothing by itself either.
+A logged-in participant carries no nudging scope and not the `platform-admin` role, so
+every `/admin` route answers `403` with a message naming the missing permission. Being a
+service account grants nothing by itself either.
 
 ### REQ-0008 — `allow` says only that somebody is there, and no route uses it
 
@@ -110,3 +111,17 @@ The bundle also publishes a `filters` rule — an empty list for a service, a
 `user_id = <subject>` predicate for a user — and **nothing in this service reads it**. It
 is pinned so that whoever wires it up finds out that a service account is given no filter
 and would therefore see every row.
+
+### REQ-0082 — no group grants anything, at either level
+
+A group is never a grant here. Two kinds reach a token, and neither is read for
+authorisation:
+
+- **a realm group** (`groups`: `/admins`, `admins`, `admin`, …). Realm groups are retired;
+  one still present in an old or misconfigured token grants nothing.
+- **an organisation's own group** (`organization.<alias>.groups`). It is valid only inside
+  that organisation, and no decision in this service is about an organisation (REQ-0008),
+  so it grants nothing here. An organisation's `admins` member is not an administrator.
+
+The bundle's `input.subject.groups` is therefore always empty. A realm **role** that is not
+`platform-admin` (`default-roles-celine`, or a retired `admin` role) grants nothing either.

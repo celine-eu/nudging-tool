@@ -20,6 +20,11 @@ tasks:
     cmds:
       - uv run pytest -- {{.CLI_ARGS}}
 
+  test:real-tokens:
+    desc: "Run the opt-in real-token layer against the local Keycloak (ADR-0004)"
+    cmds:
+      - NUDGING_REAL_TOKENS=1 uv run --no-sync pytest tests/integration -rs {{.CLI_ARGS}}
+
   release:
     cmds:
       - uv run semantic-release -v version --no-vcs-release

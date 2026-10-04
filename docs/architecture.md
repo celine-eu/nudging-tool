@@ -68,14 +68,15 @@ Rego, evaluated **in process** through `celine.sdk.policies` (`regorus`) —
 `policies/celine/nudging/authz.rego`. No OPA server is involved.
 
 - `is_ingest` — the `nudging.ingest` scope, or any administrator
-- `is_admin` — the `nudging.admin` scope, **or** membership of the `admin` group
-  (realm-level or organisation-level)
+- `is_admin` — the `nudging.admin` scope, **or** the realm role `platform-admin`
+  (`realm_access.roles`, passed as `input.subject.roles`). No group grants anything:
+  not a realm group, not an organisation's own group
 - User endpoints — ownership in SQL, matching the token's `sub` *or* its
   `preferred_username`. The bundle also publishes a `filters` rule, and nothing reads it.
 
 The bundle **fails closed**: the service will not start without it, and an evaluation that
 does not return an explicit `true` denies. See
-[REQ-0003 – REQ-0010](specifications/identity-and-authorisation.md).
+[REQ-0003 – REQ-0010 and REQ-0082](specifications/identity-and-authorisation.md).
 
 ## Stack
 

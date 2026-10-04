@@ -30,7 +30,7 @@ router = APIRouter()
     summary="Send a test push notification",
     description=(
         "Sends a test Web Push notification to all active subscriptions for a given user. "
-        "Requires nudging.admin scope or admin group. "
+        "Requires nudging.admin scope or platform-admin role. "
         "user_id is explicit in the body because an admin targets any user."
     ),
 )
