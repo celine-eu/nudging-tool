@@ -5,14 +5,21 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import requests
 from pywebpush import WebPushException, webpush
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from celine.nudging.config.settings import settings
 from celine.nudging.db.models import DeliveryLog, WebPushSubscription
 from celine.nudging.orchestrator.models import DeliveryJob
 from celine.nudging.publishers.base import Publisher, PublishResult
 from celine.nudging.notifications_tracking import sign_click_tracking_token
+from celine.nudging.publishers.web.endpoint import (
+    EndpointRefused,
+    check_endpoint,
+    push_session,
+)
 from celine.nudging.utils import get_vapid
 
 
@@ -87,8 +94,12 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
             failed = len(subscriptions)
             last_error = f"Unusable VAPID_PRIVATE_KEY: {e}"
 
+        session = push_session(settings)
         for sub in subscriptions if signing_key is not None else []:
             try:
+                # Checked again at send time (REQ-0084): a stored endpoint may predate
+                # the rules, and a name may resolve elsewhere than when it was stored.
+                check_endpoint(sub.endpoint, settings)
                 webpush(
                     subscription_info={
                         "endpoint": sub.endpoint,
@@ -100,8 +111,21 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
                     data=json.dumps(payload),
                     vapid_private_key=signing_key,
                     vapid_claims={"sub": vapid.subject},
+                    timeout=settings.WEBPUSH_TIMEOUT_SECONDS,
+                    requests_session=session,
                 )
                 sent += 1
+
+            except EndpointRefused as e:
+                failed += 1
+                last_error = f"endpoint refused: {e.reason}"
+                if e.permanent:
+                    sub.enabled = False
+
+            except requests.RequestException as e:
+                # No answer at all (timeout, refused connection): transient, keep it.
+                failed += 1
+                last_error = f"{type(e).__name__}: {e}"
 
             except WebPushException as e:
                 failed += 1
@@ -113,6 +137,7 @@ async def send_webpush(db: AsyncSession, job: DeliveryJob) -> PublishResult:
                 if status_code in (404, 410):
                     sub.enabled = False
 
+        session.close()
         await db.commit()
 
     # Determine final status

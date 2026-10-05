@@ -105,32 +105,41 @@ def test_a_token_whose_payload_names_no_notification_is_rejected():
 
 
 # @verifies REQ-0056
-def test_the_vapid_private_key_is_the_fallback_secret(monkeypatch):
+@pytest.mark.parametrize("env", ["", "staging", "prod"])
+def test_outside_dev_only_the_click_tracking_secret_signs(monkeypatch, env):
     """
-    An operator who never set `CLICK_TRACKING_SECRET` still gets signed tokens, using
-    the VAPID private key. The consequence is that **rotating the VAPID key invalidates
-    every token in flight**, so clicks on notifications already delivered stop being
-    recorded — silently, because a rejected token is a `400` nobody reads.
+    The VAPID private key is never the signing secret. Outside dev an unset
+    `CLICK_TRACKING_SECRET` refuses to sign — the posture guard already refuses to start
+    without it (REQ-0081), so this is the second line, for a code path that skipped it.
     """
+    monkeypatch.setenv("CELINE_ENV", env)
     monkeypatch.setattr(tracking.settings, "CLICK_TRACKING_SECRET", "  ")
+    monkeypatch.setattr(tracking.settings, "VAPID_PRIVATE_KEY", "a-configured-vapid-key")
 
-    token = sign_click_tracking_token("notification-1")
-    assert unsign_click_tracking_token(token) == "notification-1"
-
-    monkeypatch.setattr(tracking.settings, "VAPID_PRIVATE_KEY", "a-rotated-key")
-    with pytest.raises(ValueError, match="signature"):
-        unsign_click_tracking_token(token)
+    with pytest.raises(RuntimeError, match="CLICK_TRACKING_SECRET must be configured"):
+        sign_click_tracking_token("notification-1")
 
 
 # @verifies REQ-0056
-def test_with_no_secret_configured_at_all_signing_refuses(monkeypatch):
+def test_in_dev_an_unset_secret_signs_with_the_development_secret(monkeypatch):
     """
-    A push is built with a token, so this raises **inside the delivery** rather than at
-    startup: a service with neither secret configured fails every web push at the moment
-    of sending.
+    A local run works without configuration, with a fixed development secret — not the
+    VAPID key, so rotating that key leaves tokens in flight valid.
     """
+    monkeypatch.setenv("CELINE_ENV", "dev")
     monkeypatch.setattr(tracking.settings, "CLICK_TRACKING_SECRET", "")
-    monkeypatch.setattr(tracking.settings, "VAPID_PRIVATE_KEY", "")
 
-    with pytest.raises(RuntimeError, match="must be configured"):
-        sign_click_tracking_token("notification-1")
+    token = sign_click_tracking_token("notification-1")
+    assert tracking._tracking_secret() == tracking.DEV_CLICK_TRACKING_SECRET
+
+    monkeypatch.setattr(tracking.settings, "VAPID_PRIVATE_KEY", "a-rotated-key")
+    assert unsign_click_tracking_token(token) == "notification-1"
+
+
+# @verifies REQ-0056
+def test_rotating_the_vapid_key_leaves_tokens_valid(monkeypatch):
+    token = sign_click_tracking_token("notification-1")
+
+    monkeypatch.setattr(tracking.settings, "VAPID_PRIVATE_KEY", "a-rotated-key")
+
+    assert unsign_click_tracking_token(token) == "notification-1"

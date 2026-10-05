@@ -478,3 +478,25 @@ async def test_every_admin_route_needs_a_token(client):
     assert (await client.post("/admin/seed/apply", json={})).status_code == 401
     assert (await client.post("/admin/webpush/send-test", json={"user_id": "u"})).status_code == 401
     assert (await client.post("/admin/scheduled-events", json={})).status_code == 401
+
+
+# @verifies REQ-0084
+async def test_a_test_push_applies_the_endpoint_rules(admin_client, db, webpush):
+    db.add_all(
+        [
+            WebPushSubscription(
+                id="s1", user_id=USER_SUB, endpoint="https://169.254.169.254/x",
+                p256dh="k", auth="a", enabled=True,
+            ),
+            WebPushSubscription(
+                id="s2", user_id=USER_SUB, endpoint="https://push.test/alice",
+                p256dh="k", auth="a", enabled=True,
+            ),
+        ]
+    )
+    await db.commit()
+
+    response = await admin_client.post("/admin/webpush/send-test", json={"user_id": USER_SUB})
+
+    assert response.json()["sent"] == 1 and response.json()["failed"] == 1
+    assert webpush.endpoints == ["https://push.test/alice"]

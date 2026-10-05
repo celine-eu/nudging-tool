@@ -6,6 +6,7 @@ Each fake sits at the narrowest point that still leaves our code running:
 |---|---|---|
 | Keycloak JWKS | `FakeJwt` replacing `JwtUser.from_token` | the middleware, the open-path list |
 | a web-push service | `FakeWebPush` replacing `pywebpush.webpush` | subscription selection, payload, delivery log |
+| DNS | `FakeDns` replacing the endpoint checker's resolver | every endpoint rule (REQ-0083, REQ-0084) |
 | an SMTP server | `FakeSmtp` replacing the `smtplib` module | message construction, TLS branch, delivery log |
 | PostgreSQL | SQLite (`conftest.py`) | every query, the schema, the constraints |
 """
@@ -185,6 +186,40 @@ def install_fake_jwt(monkeypatch) -> FakeJwt:
 # ---------------------------------------------------------------------------
 # Web push
 # ---------------------------------------------------------------------------
+
+# Any globally routable address will do: nothing ever connects to it.
+PUBLIC_ADDRESS = "34.120.0.10"
+
+
+@dataclass
+class FakeDns:
+    """Name → addresses, for the endpoint checker. An unknown name does not resolve.
+
+    `push.test` and the default push services (and their subdomains) resolve to a public
+    address unless a test says otherwise with `set`.
+    """
+
+    records: dict[str, list[str]] = field(default_factory=dict)
+    public_suffixes: tuple[str, ...] = (
+        "push.test",
+        "fcm.googleapis.com",
+        "updates.push.services.mozilla.com",
+        "push.apple.com",
+        "notify.windows.com",
+    )
+
+    def set(self, host: str, *addresses: str) -> None:
+        self.records[host] = list(addresses)
+
+    def __call__(self, host: str, port: int) -> list[str]:
+        import socket
+
+        if host in self.records:
+            return self.records[host]
+        if any(host == s or host.endswith("." + s) for s in self.public_suffixes):
+            return [PUBLIC_ADDRESS]
+        raise socket.gaierror(f"fake dns: {host} does not resolve")
+
 
 
 @dataclass

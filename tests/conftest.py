@@ -60,6 +60,15 @@ os.environ["VAPID_PUBLIC_KEY"] = "test-vapid-public-key"
 os.environ["VAPID_PRIVATE_KEY"] = "test-vapid-private-key"
 os.environ["VAPID_SUBJECT"] = "mailto:test@example.test"
 
+# The shipped push-service allow-list plus the suite's own `push.test`, so every web-push
+# test runs the endpoint rules (REQ-0083) rather than the dev relaxation. Names resolve
+# through `FakeDns` (the autouse `dns` fixture), never the network.
+os.environ["WEBPUSH_ALLOWED_HOSTS"] = (
+    "push.test,fcm.googleapis.com,updates.push.services.mozilla.com,"
+    "push.apple.com,notify.windows.com"
+)
+os.environ["WEBPUSH_ENDPOINT_RELAXED"] = "false"
+
 # Emptied rather than pointed somewhere: the email publisher raises before it opens a
 # socket when either is unset, so a test that reaches it by accident fails locally
 # instead of dialling a developer's SMTP relay. The `smtp` fixture sets both when a test
@@ -84,6 +93,7 @@ from celine.nudging.db.session import get_db  # noqa: E402
 from celine.nudging.security import policies as policies_module  # noqa: E402
 
 from tests.fakes import (  # noqa: E402
+    FakeDns,
     FakeSmtp,
     FakeWebPush,
     install_fake_jwt,
@@ -184,6 +194,16 @@ async def db(db_sessionmaker):
 # ---------------------------------------------------------------------------
 # Outbound boundaries — the two places this service talks to the world
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def dns(monkeypatch) -> FakeDns:
+    """Every name the endpoint checker looks up resolves here, not on the network."""
+    from celine.nudging.publishers.web import endpoint
+
+    fake = FakeDns()
+    monkeypatch.setattr(endpoint, "_resolve", fake)
+    return fake
 
 
 @pytest.fixture

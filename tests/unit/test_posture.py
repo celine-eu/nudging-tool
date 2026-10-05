@@ -97,6 +97,7 @@ def test_hardened_refuses_every_shipped_default_at_once(env):
         ("VAPID_PUBLIC_KEY", {"VAPID_PUBLIC_KEY": ""}),
         ("VAPID_PRIVATE_KEY", {"VAPID_PRIVATE_KEY": "  "}),
         ("CLICK_TRACKING_SECRET", {"CLICK_TRACKING_SECRET": ""}),
+        ("WEBPUSH_ENDPOINT_RELAXED", {"WEBPUSH_ENDPOINT_RELAXED": True}),
     ],
 )
 def test_hardened_refuses_each_default_on_its_own(env, setting, update):

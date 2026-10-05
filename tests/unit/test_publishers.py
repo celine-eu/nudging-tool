@@ -500,3 +500,74 @@ async def test_the_email_delivery_log_records_the_attempt_either_way(db, smtp):
     assert rows["job-2"].status == "failed"
     assert rows["job-2"].sent_at is None
     assert "nope" in rows["job-2"].error
+
+
+# @verifies REQ-0084
+async def test_every_push_has_a_timeout_and_the_checked_session(db, webpush):
+    db.add(_subscription("https://push.test/alice"))
+    await db.commit()
+
+    await send_webpush(db, _job())
+
+    from celine.nudging.publishers.web.endpoint import _NoRedirectSession
+
+    assert webpush.calls[0]["timeout"] == 10.0
+    assert isinstance(webpush.calls[0]["requests_session"], _NoRedirectSession)
+
+
+# @verifies REQ-0084
+async def test_a_stored_endpoint_outside_the_rules_is_not_sent_to_and_is_disabled(
+    db, webpush
+):
+    """A row stored before the rules existed: it can never pass, so it is switched off."""
+    db.add_all(
+        [
+            _subscription("http://10.0.0.5/push"),
+            _subscription("https://push.test/alice"),
+        ]
+    )
+    await db.commit()
+
+    result = await send_webpush(db, _job())
+
+    assert webpush.endpoints == ["https://push.test/alice"]
+    assert result.status == "sent"
+    rows = {s.endpoint: s.enabled for s in (await db.execute(select(WebPushSubscription))).scalars()}
+    assert rows == {"http://10.0.0.5/push": False, "https://push.test/alice": True}
+
+
+# @verifies REQ-0084
+async def test_an_endpoint_now_resolving_to_a_private_address_is_skipped_but_kept(
+    db, webpush, dns
+):
+    db.add(_subscription("https://push.test/alice"))
+    await db.commit()
+    dns.set("push.test", "192.168.0.10")
+
+    result = await send_webpush(db, _job())
+
+    assert webpush.calls == []
+    assert result.status == "failed"
+    assert "non-public address" in result.error
+    assert (await db.execute(select(WebPushSubscription))).scalar_one().enabled is True
+
+
+# @verifies REQ-0084
+async def test_a_push_that_gets_no_answer_is_a_failure_not_an_error(db, monkeypatch):
+    """A timeout or refused connection raises from `requests`, not `WebPushException`."""
+    import requests
+
+    from celine.nudging.publishers.web import worker
+
+    def no_answer(**kwargs):
+        raise requests.ConnectTimeout("timed out")
+
+    monkeypatch.setattr(worker, "webpush", no_answer)
+    db.add(_subscription("https://push.test/alice"))
+    await db.commit()
+
+    result = await send_webpush(db, _job())
+
+    assert result.status == "failed"
+    assert "ConnectTimeout" in result.error
+    assert (await db.execute(select(WebPushSubscription))).scalar_one().enabled is True

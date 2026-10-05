@@ -70,6 +70,24 @@ enabled: a `503` during an outage is not evidence that a browser has gone.
 
 The same handling applies to an administrator's test push (REQ-0005).
 
+### REQ-0084 — a push is sent only to an endpoint that passes the rules at send time
+
+Every send — a delivery and an administrator's test push — checks the stored endpoint
+against REQ-0083 again, because a row may predate the rules and a name can resolve
+somewhere else than when it was stored. Then:
+
+- a URL that breaks a rule (scheme, port, credentials, host not allowed) is not sent to and
+  the subscription is **disabled** — it can never pass;
+- a host that does not resolve, or resolves to a non-public address, is not sent to and the
+  subscription stays enabled — resolution can change;
+- the request goes through a session that follows no redirect (a `3xx` is a failed push,
+  REQ-0046 applies), ignores the environment's proxy settings, and refuses the connection
+  if the peer it reached is not a public address — the name is resolved again on connect;
+- it has a timeout, `WEBPUSH_TIMEOUT_SECONDS` (10 s). A timeout or a refused connection is
+  a failed push and leaves the subscription enabled.
+
+Each of these is recorded on the delivery log as `failed` with its reason.
+
 ### REQ-0047 — an absent recipient and an absent configuration are failures, not errors
 
 Recorded and returned rather than raised:

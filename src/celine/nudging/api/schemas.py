@@ -249,7 +249,8 @@ class WebPushKeysIn(BaseModel):
 
 
 class WebPushSubscriptionIn(BaseModel):
-    endpoint: str
+    # Checked against the push-service rules by the route (REQ-0083).
+    endpoint: str = Field(..., max_length=2048)
     keys: WebPushKeysIn
 
 

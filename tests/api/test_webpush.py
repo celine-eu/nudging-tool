@@ -216,3 +216,40 @@ async def test_every_webpush_route_needs_a_token(client):
     assert (
         await client.post("/webpush/unsubscribe", json={"endpoint": SUBSCRIPTION["endpoint"]})
     ).status_code == 401
+
+
+# @verifies REQ-0083
+async def test_a_subscription_with_an_endpoint_outside_the_rules_is_refused_and_not_stored(
+    user_client, db, dns
+):
+    dns.set("fcm.googleapis.com", "10.0.0.5")
+    for endpoint in (
+        "http://push.test/alice",
+        "https://example.org/push",
+        "https://169.254.169.254/latest/meta-data",
+        "https://push.test:8443/alice",
+        "https://fcm.googleapis.com/fcm/send/x",
+    ):
+        response = await user_client.post(
+            "/webpush/subscribe",
+            json={"subscription": {**SUBSCRIPTION, "endpoint": endpoint}},
+        )
+
+        assert response.status_code == 422, endpoint
+        assert response.json()["detail"].startswith("endpoint refused")
+    assert await _rows(db) == []
+
+
+# @verifies REQ-0083
+async def test_a_browser_push_service_endpoint_is_accepted(user_client, db):
+    for endpoint in (
+        "https://fcm.googleapis.com/fcm/send/abc:def",
+        "https://updates.push.services.mozilla.com/wpush/v2/gAAAAA",
+        "https://web.push.apple.com/QGx2",
+        "https://wns2-par02p.notify.windows.com/w/?token=BQYAAA",
+    ):
+        response = await user_client.post(
+            "/webpush/subscribe",
+            json={"subscription": {**SUBSCRIPTION, "endpoint": endpoint}},
+        )
+        assert response.status_code == 200, endpoint

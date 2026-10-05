@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 import logging
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,7 @@ from celine.nudging.api.schemas import (
 from celine.nudging.db.models import WebPushSubscription
 from celine.nudging.db.session import get_db
 from celine.nudging.config.settings import settings
+from celine.nudging.publishers.web.endpoint import EndpointRefused, check_endpoint
 from celine.nudging.security.policies import get_current_user
 from celine.sdk.auth.jwt import JwtUser
 
@@ -56,7 +58,9 @@ async def vapid_public_key(
     description=(
         "Registers or updates a Web Push subscription for the authenticated user. "
         "The user identity is taken from the JWT – callers cannot register on behalf of others. "
-        "If the endpoint already exists for that user, its keys are refreshed."
+        "If the endpoint already exists for that user, its keys are refreshed. "
+        "The endpoint must be an https URL of an allowed push service that resolves to "
+        "public addresses; anything else is 422."
     ),
 )
 async def subscribe(
@@ -64,6 +68,16 @@ async def subscribe(
     user: JwtUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StatusResponse:
+    # REQ-0083: the endpoint is where this service will POST, so it is checked before
+    # it is stored. The name lookup blocks, hence the thread.
+    try:
+        await asyncio.to_thread(check_endpoint, body.subscription.endpoint, settings)
+    except EndpointRefused as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"endpoint refused: {e.reason}",
+        )
+
     owned_user_ids = _owned_user_ids(user)
     filters = [
         WebPushSubscription.user_id.in_(owned_user_ids),

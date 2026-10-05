@@ -43,7 +43,8 @@ The service follows `celine.sdk.posture`: **only `CELINE_ENV=dev` accepts the de
 defaults** below (`task run` exports it). Unset, or any other value, is hardened and
 `create_app()` refuses to start while the database password is a local one, the client secret
 equals the client id, the issuer is the SDK's local default, or `VAPID_PUBLIC_KEY`,
-`VAPID_PRIVATE_KEY` or `CLICK_TRACKING_SECRET` is unset — see REQ-0081.
+`VAPID_PRIVATE_KEY` or `CLICK_TRACKING_SECRET` is unset, or `WEBPUSH_ENDPOINT_RELAXED` is on —
+see REQ-0081.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -57,7 +58,10 @@ equals the client id, the issuer is the SDK's local default, or `VAPID_PUBLIC_KE
 | `VAPID_PUBLIC_KEY` | — | VAPID public key (base64url) |
 | `VAPID_PRIVATE_KEY` | — | VAPID private key (base64url) |
 | `VAPID_SUBJECT` | `mailto:dev@example.com` | VAPID contact URI |
-| `CLICK_TRACKING_SECRET` | — | Signs click-tracking tokens; required outside dev (in dev it falls back to the VAPID private key) |
+| `CLICK_TRACKING_SECRET` | — | Signs click-tracking tokens; required outside dev (in dev an unset one uses a fixed development secret, never the VAPID key) |
+| `WEBPUSH_ALLOWED_HOSTS` | the browser push services | Comma-separated push-service hosts (and subdomains) a subscription may name; `*` for any public host (REQ-0083) |
+| `WEBPUSH_ENDPOINT_RELAXED` | `false` | Lifts the endpoint rules for a local push stand-in; dev only, refused elsewhere |
+| `WEBPUSH_TIMEOUT_SECONDS` | `10` | Timeout of each push request (REQ-0084) |
 | `SMTP_HOST` | — | SMTP server hostname |
 | `SMTP_PORT` | `587` | SMTP server port |
 | `SMTP_USERNAME` | — | SMTP authentication username |

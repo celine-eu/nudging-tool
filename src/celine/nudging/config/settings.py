@@ -33,6 +33,17 @@ class Settings(BaseSettings):
     VAPID_PRIVATE_KEY: str = ""
     VAPID_SUBJECT: str = "mailto:dev@example.com"
     CLICK_TRACKING_SECRET: str = ""
+    # Web-push destinations (REQ-0083): comma-separated host suffixes, `*` for any
+    # public host. An entry matches itself and its subdomains. The default is the
+    # browser push services: FCM (Chrome, Edge on Android), Mozilla autopush (Firefox),
+    # web.push.apple.com (Safari), *.notify.windows.com (Edge on Windows).
+    WEBPUSH_ALLOWED_HOSTS: str = (
+        "fcm.googleapis.com,updates.push.services.mozilla.com,push.apple.com,notify.windows.com"
+    )
+    # Lifts every endpoint rule, for a local push-service stand-in. Honoured only with
+    # CELINE_ENV=dev; the posture guard refuses it anywhere else.
+    WEBPUSH_ENDPOINT_RELAXED: bool = False
+    WEBPUSH_TIMEOUT_SECONDS: float = 10.0
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USERNAME: str = ""
@@ -67,8 +78,8 @@ def posture_guard(settings: Settings, env: str | None = None) -> PostureGuard:
     raises with the complete list; in dev it logs one warning. VAPID and the
     click-tracking secret otherwise fail only when first used, so a deployment
     without them would start and then drop every push; outside dev they are
-    required up front. That also makes the click-token fallback to the VAPID
-    private key a dev-only path.
+    required up front. The click-tracking secret has no fallback to the VAPID key;
+    in dev an unset one uses a fixed development secret (`notifications_tracking`).
     """
     guard = PostureGuard("nudging-api", env=env)
     guard.forbid_dev_database_url("DATABASE_URL", settings.DATABASE_URL)
@@ -90,6 +101,11 @@ def posture_guard(settings: Settings, env: str | None = None) -> PostureGuard:
         "CLICK_TRACKING_SECRET",
         settings.CLICK_TRACKING_SECRET,
         "Set a dedicated random secret for signing click-tracking tokens.",
+    )
+    guard.forbid_true(
+        "WEBPUSH_ENDPOINT_RELAXED",
+        settings.WEBPUSH_ENDPOINT_RELAXED,
+        "Unset it; outside dev every push endpoint is checked (REQ-0083).",
     )
     return guard
 

@@ -59,11 +59,11 @@ notification as clicked.
 - A malformed token, a tampered payload, or a signature from another secret is `400`. A
   valid token for a notification that no longer exists is `404`.
 
-The secret is `CLICK_TRACKING_SECRET`, falling back to `VAPID_PRIVATE_KEY`. So **rotating
-the VAPID key invalidates every token in flight** for an operator who never set the first
-one, and clicks on already-delivered notifications stop being recorded — silently,
-because a rejected token is a `400` nobody reads. With neither configured, signing raises
-*inside the delivery*, failing every web push at the moment of sending.
+The secret is `CLICK_TRACKING_SECRET` and nothing else: the VAPID private key is never
+used to sign, so rotating it leaves tokens in flight valid. Outside `CELINE_ENV=dev` the
+service does not start without it (REQ-0081), and signing refuses if it is unset anyway.
+In dev an unset secret signs with a fixed development secret, so a local run needs no
+configuration; that secret is public and signs nothing that matters.
 
 ### REQ-0057 — the first click is the one that is kept
 
@@ -137,6 +137,26 @@ live.
 participant. It is public by definition, and it is served from configuration rather than
 derived — so a mismatched key pair hands out a key that every subscription will later
 fail to verify.
+
+### REQ-0083 — an endpoint is accepted only if it is a public push service
+
+The endpoint is a URL the browser chooses, and this service will POST to it from inside
+its own network, so `POST /webpush/subscribe` checks it before storing anything. Refused
+is `422` with `endpoint refused: <rule>`, and no row is written.
+
+- `https`, port 443, no user or password in the URL;
+- the host is on `WEBPUSH_ALLOWED_HOSTS` — comma-separated, an entry matching itself and
+  its subdomains. The default is the browser push services: `fcm.googleapis.com`,
+  `updates.push.services.mozilla.com`, `push.apple.com`, `notify.windows.com`. `*` lifts
+  the list, not the rules around it;
+- every address the host resolves to is public: not private, loopback, link-local (the
+  cloud metadata address included), shared, reserved or multicast, for IPv4, IPv6 and
+  IPv4-mapped IPv6. A name that does not resolve is refused too.
+
+`WEBPUSH_ENDPOINT_RELAXED=true` lifts every rule, for a local push-service stand-in. It
+counts only with `CELINE_ENV=dev`; anywhere else it is ignored here and refused at startup
+(REQ-0081). Without it, dev applies the rules like any other environment — a real browser's
+endpoint passes them.
 
 ### REQ-0062 — unsubscribing disables, and says nothing about what exists
 

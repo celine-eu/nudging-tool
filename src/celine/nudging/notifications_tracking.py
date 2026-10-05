@@ -5,7 +5,14 @@ import hashlib
 import hmac
 import json
 
+from celine.sdk.posture import is_dev
+
 from celine.nudging.config.settings import settings
+
+# Used only under CELINE_ENV=dev when CLICK_TRACKING_SECRET is unset, so a local run
+# signs clicks without configuration. It is public, so it signs nothing that matters;
+# outside dev the posture guard refuses to start without a real secret (REQ-0081).
+DEV_CLICK_TRACKING_SECRET = "dev-only-click-tracking-secret"
 
 
 def _urlsafe_b64encode(raw: bytes) -> str:
@@ -18,12 +25,13 @@ def _urlsafe_b64decode(value: str) -> bytes:
 
 
 def _tracking_secret() -> str:
-    secret = settings.CLICK_TRACKING_SECRET.strip() or settings.VAPID_PRIVATE_KEY.strip()
-    if not secret:
-        raise RuntimeError(
-            "CLICK_TRACKING_SECRET or VAPID_PRIVATE_KEY must be configured for click tracking"
-        )
-    return secret
+    """`CLICK_TRACKING_SECRET`, and nothing else outside dev (REQ-0056)."""
+    secret = settings.CLICK_TRACKING_SECRET.strip()
+    if secret:
+        return secret
+    if is_dev():
+        return DEV_CLICK_TRACKING_SECRET
+    raise RuntimeError("CLICK_TRACKING_SECRET must be configured for click tracking")
 
 
 def sign_click_tracking_token(notification_id: str) -> str:
