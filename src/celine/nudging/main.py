@@ -7,6 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from celine.sdk.posture import docs_urls
 
 from celine.nudging.config.settings import posture_guard, settings
 from celine.nudging.security.auth import AuthMiddleware
@@ -47,7 +48,11 @@ def create_app():
     default_static_path = Path(__file__).resolve().parent / "tests" / "static"
     STATIC_PATH = Path(os.getenv("STATIC_PATH", str(default_static_path))).resolve()
 
-    app = FastAPI(title="nudging-tool-api", version="0.1.0", lifespan=lifespan)
+    # Outside CELINE_ENV=dev /docs, /redoc and /openapi.json are not mounted unless
+    # CELINE_PUBLIC_DOCS=true.
+    app = FastAPI(
+        title="nudging-tool-api", version="0.1.0", lifespan=lifespan, **docs_urls()
+    )
 
     app.add_middleware(AuthMiddleware)
 

@@ -10,7 +10,9 @@ Rego bundle evaluated in process that decides whether it may proceed.
 
 `AuthMiddleware` runs before every dependency. The open list is a literal set —
 `/health`, `/docs`, `/redoc`, `/openapi.json`, `/favicon.ico`,
-`/notifications/track-click` — plus anything under the `/static/` prefix.
+`/notifications/track-click` — plus anything under the `/static/` prefix. The three
+docs paths are mounted only in `CELINE_ENV=dev` or with `CELINE_PUBLIC_DOCS=true`;
+anywhere else they answer `404`.
 
 It is matched exactly, not by route pattern: `/health/` with a trailing slash is closed,
 and `/static` without one is closed.
