@@ -13,7 +13,7 @@ dependencies = [
   "asyncpg[binary]>=0.31.0",
   # TODO: raise to the celine-sdk release that ships `celine.sdk.posture` (unreleased),
   # `docs_urls` included.
-  "celine-sdk>=1.20.0",
+  "celine-sdk>=2.0.0",
   "fastapi>=0.129.0",
   "httpx>=0.28.1",
   "jinja2>=3.1.6",
