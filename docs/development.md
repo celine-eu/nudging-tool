@@ -24,8 +24,7 @@ client secret equal to the client id, the SDK's default issuer, or a missing
 `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `CLICK_TRACKING_SECRET` (REQ-0081). In dev the same
 findings are one warning. `CELINE_ENV=staging task run` runs the same entry point hardened.
 
-`celine.sdk.posture` ships in the next celine-sdk release; until then link the local checkout
-(`uv pip install --python .venv/bin/python -e ../celine-sdk`).
+`celine.sdk.posture` ships in celine-sdk 2.0.0, the floor in `pyproject.toml`.
 
 ## Taskfile Commands
 
