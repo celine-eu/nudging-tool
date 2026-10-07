@@ -58,7 +58,7 @@ same change.
 | REQ-0050, REQ-0081 | [operability](operability.md) — starting, degrading and failing |
 | REQ-0051 – REQ-0062, REQ-0083 | [participants](participants.md) — notifications, preferences, subscriptions |
 | REQ-0063 – REQ-0067 | [scheduling](scheduling.md) — events that fire later |
-| REQ-0068 – REQ-0075, REQ-0080 | [seeding](seeding.md) — rules, templates and the catalogue |
+| REQ-0068 – REQ-0075, REQ-0080, REQ-0085 | [seeding](seeding.md) — rules, templates and the catalogue |
 | REQ-0076 – REQ-0078 | [manager analytics](analytics.md) — privacy-safe REC aggregates for the manager dashboard |
 
 ## What is not covered

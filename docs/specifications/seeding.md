@@ -108,3 +108,13 @@ template without it is loaded unchanged (the key is absent, not null). The HTML 
 rendered from the same context as the text body, but through an autoescaping environment:
 a value with an angle bracket is text in the table, never a tag. The plain body keeps
 REQ-0032's no-escape behaviour.
+
+### REQ-0085 — startup seeds the seeded preferences only under `CELINE_ENV=dev`
+
+The image ships `seed/` and `SEED_DIR` defaults to it, so every deployment runs `auto_seed()`
+over the repository's seed on every start (REQ-0050). Its rules and templates are the
+catalogue and are seeded everywhere. Its preferences are development fixtures — made-up
+participants in made-up communities — and are upserted only when `celine.sdk.posture` says
+`dev`; anywhere else startup logs how many it skipped and writes none. A deployment that
+deleted such rows keeps them deleted across restarts. Seeding through the CLI or the admin
+endpoint is explicit and is not affected.

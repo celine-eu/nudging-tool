@@ -53,7 +53,7 @@ see REQ-0081.
 | `DEFAULT_LANG` | `en` | Default notification language |
 | `MAX_PER_DAY_DEFAULT` | `3` | Default max notifications per day |
 | `SCHEDULER_POLL_SECONDS` | `30.0` | Scheduler polling interval |
-| `SEED_DIR` | `./seed` | Directory containing rule definitions |
+| `SEED_DIR` | `./seed` | Directory containing rule definitions, seeded at startup; its preferences only under `CELINE_ENV=dev` (REQ-0085) |
 | `ORCHESTRATOR_URL` | `http://api.celine.localhost/nudging` | Public base URL |
 | `VAPID_PUBLIC_KEY` | — | VAPID public key (base64url) |
 | `VAPID_PRIVATE_KEY` | — | VAPID private key (base64url) |

@@ -3,12 +3,18 @@
 Called during the FastAPI lifespan if SEED_DIR is configured.
 Reads the three YAML files and calls the same upsert logic used by
 the HTTP endpoint — so startup seeding and CLI seeding are identical.
+
+Rules and templates are the catalogue and are seeded everywhere. The seeded
+preferences are development fixtures (made-up participants in made-up
+communities), so startup writes them only under CELINE_ENV=dev (REQ-0085).
 """
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
+
+from celine.sdk.posture import is_dev
 
 from celine.nudging.config.settings import settings
 from celine.nudging.seed import (
@@ -44,6 +50,13 @@ async def auto_seed() -> None:
     rules_data = seeds.rules
     tmpl_data = seeds.templates
     pref_data = seeds.preferences
+    if pref_data and not is_dev():
+        logger.info(
+            "Auto-seed: %d seeded preferences skipped, they are development fixtures "
+            "(CELINE_ENV is not dev).",
+            len(pref_data),
+        )
+        pref_data = []
 
     if not any([rules_data, tmpl_data, pref_data]):
         logger.info("No seed data found in %s — skipping.", seed_dir)
