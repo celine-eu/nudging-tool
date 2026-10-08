@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v1.7.1 (2026-10-08)
+
+### Bug Fixes
+
+- Serve api docs only in dev unless CELINE_PUBLIC_DOCS is set
+  ([`d019588`](https://github.com/celine-eu/nudging-tool/commit/d019588dc657540c565983128f4bc3d05ea3e364))
+
+- Startup seeds the fixture preferences only under CELINE_ENV=dev
+  ([`60953a5`](https://github.com/celine-eu/nudging-tool/commit/60953a5fda3f7a4e56748f885896cbef68bc4ea2))
+
+- Validate web-push endpoints, drop VAPID fallback for click tokens
+  ([`d297c9c`](https://github.com/celine-eu/nudging-tool/commit/d297c9c03e5b78967ee80dcd9cffc90d01c199df))
+
+### Chores
+
+- Drop the celine-sdk release TODOs now that 2.0.0 ships them
+  ([`2b76259`](https://github.com/celine-eu/nudging-tool/commit/2b762599da225f3bcf51c2b04f1bd1e8c7c04ba1))
+
+- Upgrade celine-sdk to 2.0.0
+  ([`c72404e`](https://github.com/celine-eu/nudging-tool/commit/c72404ec948c7d7c6c81e493592a0e3b4cd7afbf))
+
+
 ## v1.7.0 (2026-10-02)
 
 ### Bug Fixes
