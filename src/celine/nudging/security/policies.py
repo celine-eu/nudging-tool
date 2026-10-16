@@ -45,10 +45,10 @@ def init_policy_engine() -> None:
     global _engine, _base_engine
     policies_dir = settings.policies.policies_dir
     if policies_dir is None:
-        raise ValueError("POLICIES_DIR not set")
+        raise ValueError("CELINE_POLICIES_DIR not set")
 
     if not Path(policies_dir).exists():
-        raise ValueError(f"POLICIES_DIR '{policies_dir}' does not exists")
+        raise ValueError(f"CELINE_POLICIES_DIR '{policies_dir}' does not exist")
 
     base = PolicyEngine(policies_dir=policies_dir)
     base.load()

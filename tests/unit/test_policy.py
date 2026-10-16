@@ -73,7 +73,7 @@ def test_a_missing_policies_directory_stops_the_service_rather_than_allowing(
     monkeypatch.setattr(
         policies_module.settings.policies, "policies_dir", tmp_path / "absent"
     )
-    with pytest.raises(ValueError, match="does not exists"):
+    with pytest.raises(ValueError, match="does not exist"):
         policies_module.init_policy_engine()
 
 
@@ -82,7 +82,7 @@ def test_an_unset_policies_directory_stops_the_service_too(monkeypatch):
     from celine.nudging.security import policies as policies_module
 
     monkeypatch.setattr(policies_module.settings.policies, "policies_dir", None)
-    with pytest.raises(ValueError, match="POLICIES_DIR not set"):
+    with pytest.raises(ValueError, match="CELINE_POLICIES_DIR not set"):
         policies_module.init_policy_engine()
 
 

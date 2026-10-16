@@ -33,7 +33,7 @@ audience `svc-nudging`.
 
 ### REQ-0003 — the service does not start without its policy bundle
 
-`init_policy_engine()` raises when `POLICIES_DIR` is unset or names a directory that does
+`init_policy_engine()` raises when `CELINE_POLICIES_DIR` is unset or names a directory that does
 not exist, and the lifespan does not catch it. **This is the opposite of `../celine-grid`
 and `../flexibility-api`**, which log and continue with a permissive fallback.
 

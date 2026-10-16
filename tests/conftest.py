@@ -48,7 +48,7 @@ os.environ.setdefault("CELINE_ENV", "dev")
 # pytest runs from the repository root. Pin it by absolute path so the suite does not
 # depend on the working directory, and so a missing bundle is a collection error rather
 # than a suite that proves nothing.
-os.environ["CELINE_POLICIES_POLICIES_DIR"] = str(_REPO_ROOT / "policies")
+os.environ["CELINE_POLICIES_DIR"] = str(_REPO_ROOT / "policies")
 
 # Read on every catalog call, relative by default. Same reason.
 os.environ["SEED_DIR"] = str(_REPO_ROOT / "seed")

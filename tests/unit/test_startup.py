@@ -64,11 +64,11 @@ async def test_a_bundle_that_will_not_load_stops_the_service_starting(monkeypatc
     from celine.nudging import main as main_module
 
     def _explode() -> None:
-        raise ValueError("POLICIES_DIR not set")
+        raise ValueError("CELINE_POLICIES_DIR not set")
 
     monkeypatch.setattr(main_module, "init_policy_engine", _explode)
 
-    with pytest.raises(ValueError, match="POLICIES_DIR"):
+    with pytest.raises(ValueError, match="CELINE_POLICIES_DIR"):
         async with LifespanManager(create_app()):
             pass
 
