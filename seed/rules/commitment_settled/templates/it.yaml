@@ -1,4 +1,11 @@
-title_jinja: "Il tuo spostamento è confermato! +{{ reward_points_actual }} pt"
+title_jinja: "{% if kept == 'true' %}Impegno mantenuto! +{{ reward_points_actual }} pt{% elif reason == 'duplicate_window' %}Impegno già conteggiato{% elif reason == 'no_window' %}Impegno non valutabile{% else %}Impegno non mantenuto{% endif %}"
 body_jinja: |
-  Ottimo lavoro! Hai consumato {{ actual_kwh }} kWh di energia solare comunitaria il {{ period }}.
-  {{ reward_points_actual }} punti sono stati aggiunti al tuo account.
+  {% if kept == 'true' -%}
+  Ottimo lavoro! Nella fascia {{ window_start }}–{{ window_end }} del {{ period }} hai consumato più del tuo solito: {{ reward_points_actual }} punti aggiunti al tuo account.
+  {%- elif reason == 'duplicate_window' -%}
+  La fascia {{ window_start }}–{{ window_end }} del {{ period }} rientra in una finestra per cui avevi già un impegno: conta quello, questo non toglie né aggiunge punti.
+  {%- elif reason == 'no_window' -%}
+  La fascia {{ window_start }}–{{ window_end }} del {{ period }} non coincideva con nessuna finestra della comunità: l'impegno non conta, né in positivo né in negativo.
+  {%- else -%}
+  Nella fascia {{ window_start }}–{{ window_end }} del {{ period }} il tuo consumo non ha superato il tuo solito: nessun punto questa volta. Il prossimo impegno vale sempre lo stesso.
+  {%- endif %}

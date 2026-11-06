@@ -1,0 +1,4 @@
+title_jinja: "Oportunidad solar: {{ window_start }}–{{ window_end }}"
+body_jinja: |
+  La comunidad tendrá excedente de energía solar entre las {{ window_start }} y las {{ window_end }}.
+  Comprométete a desplazar tus consumos: +{{ reward_points }} puntos si cumples el compromiso.

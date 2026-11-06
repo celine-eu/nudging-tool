@@ -1,0 +1,4 @@
+title_jinja: "Compromiso de flexibilidad: {{ window_start }}–{{ window_end }}"
+body_jinja: |
+  Tu compromiso de desplazar consumos entre las {{ window_start }} y las {{ window_end }} queda registrado.
+  +{{ reward_points_estimated }} puntos si cumples el compromiso: lo comprobamos con los datos del contador al final de la semana.

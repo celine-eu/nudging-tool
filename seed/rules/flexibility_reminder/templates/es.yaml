@@ -1,4 +1,4 @@
-title_jinja: "¡Excedente solar ahora — gana {{ reward_points_estimated }} pts!"
+title_jinja: "Excedente solar ahora — +{{ reward_points_estimated }} pt si cumples el compromiso"
 body_jinja: |
   El excedente solar comunitario está disponible de {{ window_start }} a {{ window_end }}.
-  Pon la lavadora, el lavavajillas o carga tus dispositivos — ¡gana hasta {{ reward_points_estimated }} puntos!
+  Pon la lavadora, el lavavajillas o carga tus dispositivos: +{{ reward_points_estimated }} puntos si cumples el compromiso.

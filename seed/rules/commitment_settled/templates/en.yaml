@@ -1,4 +1,11 @@
-title_jinja: "Your load shift is confirmed! +{{ reward_points_actual }} pts"
+title_jinja: "{% if kept == 'true' %}Commitment kept! +{{ reward_points_actual }} pts{% elif reason == 'duplicate_window' %}Commitment already counted{% elif reason == 'no_window' %}Commitment not evaluable{% else %}Commitment not kept{% endif %}"
 body_jinja: |
-  Great job! You consumed {{ actual_kwh }} kWh of community solar energy on {{ period }}.
-  {{ reward_points_actual }} points have been added to your account.
+  {% if kept == 'true' -%}
+  Great job! Between {{ window_start }} and {{ window_end }} on {{ period }} you consumed more than usual: {{ reward_points_actual }} points added to your account.
+  {%- elif reason == 'duplicate_window' -%}
+  The {{ window_start }}–{{ window_end }} slot on {{ period }} falls in a window you had already committed to: that one counts; this one adds or removes nothing.
+  {%- elif reason == 'no_window' -%}
+  The {{ window_start }}–{{ window_end }} slot on {{ period }} matched no community window: the commitment does not count, either way.
+  {%- else -%}
+  Between {{ window_start }} and {{ window_end }} on {{ period }} your consumption did not exceed your usual: no points this time. The next commitment is worth just as much.
+  {%- endif %}

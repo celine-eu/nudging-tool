@@ -1,4 +1,4 @@
 title_jinja: "Load shift committed: {{ window_start }}–{{ window_end }}"
 body_jinja: |
   Your commitment to shift loads between {{ window_start }} and {{ window_end }} is registered.
-  Estimated reward: {{ reward_points_estimated }} points. We'll confirm once your data is settled.
+  +{{ reward_points_estimated }} points if you keep the commitment: we check it on your meter data at the end of the week.

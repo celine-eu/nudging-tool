@@ -1,0 +1,11 @@
+title_jinja: "{% if kept == 'true' %}¡Compromiso cumplido! +{{ reward_points_actual }} pt{% elif reason == 'duplicate_window' %}Compromiso ya contabilizado{% elif reason == 'no_window' %}Compromiso no evaluable{% else %}Compromiso no cumplido{% endif %}"
+body_jinja: |
+  {% if kept == 'true' -%}
+  ¡Buen trabajo! Entre las {{ window_start }} y las {{ window_end }} del {{ period }} consumiste más de lo habitual: {{ reward_points_actual }} puntos añadidos a tu cuenta.
+  {%- elif reason == 'duplicate_window' -%}
+  La franja {{ window_start }}–{{ window_end }} del {{ period }} entra en una ventana para la que ya tenías un compromiso: cuenta aquel; este no suma ni resta puntos.
+  {%- elif reason == 'no_window' -%}
+  La franja {{ window_start }}–{{ window_end }} del {{ period }} no coincidió con ninguna ventana de la comunidad: el compromiso no cuenta, ni a favor ni en contra.
+  {%- else -%}
+  Entre las {{ window_start }} y las {{ window_end }} del {{ period }} tu consumo no superó lo habitual: sin puntos esta vez. El próximo compromiso vale lo mismo.
+  {%- endif %}
