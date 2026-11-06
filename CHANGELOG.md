@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.8.0 (2026-11-06)
+
+### Features
+
+- Fair commitment copy in it/en/es templates
+  ([`1ef93f6`](https://github.com/celine-eu/nudging-tool/commit/1ef93f6ff8f7aa2591c93d56e3e1787076188575))
+
+- Normalize CELINE_POICIES* use
+  ([`1f07883`](https://github.com/celine-eu/nudging-tool/commit/1f07883c232a73df087f99f572be58d598628e3e))
+
+
 ## v1.7.1 (2026-10-08)
 
 ### Bug Fixes
